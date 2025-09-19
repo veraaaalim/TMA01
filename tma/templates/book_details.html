@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <header class="page-header">
+    <h1>{{ book.title }}</h1>
+  </header>
+
+  <article class="book-detail">
+    <img class="cover" src="{{ book.url }}" alt="{{ book.title }} cover">
+
+    <div class="book-info">
+      <div class="byline">By {{ ", ".join(book.authors) }}</div>
+      <div class="meta">
+        Category: {{ book.category }}, {{ ", ".join(book.genres) }}<br>
+        Pages: {{ book.pages }}<br>
+        Copies: {{ book.copies }} (Available: {{ book.available }})
+      </div>
+
+      <div class="desc">
+        {% for p in book.description %}
+          <p>{{ p }}</p>
+        {% endfor %}
+      </div>
+    </div>
+  </article>
+
+{% endblock %}
