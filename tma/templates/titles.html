@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <header class="page-head">
+    <h1>BOOK TITLES</h1>
+  </header>
+
+  <section class="topbar">
+    <div class="count">Number of titles: {{ total }}</div>
+
+    <form method="get" class="filter">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        {% for c in categories %}
+          <option value="{{ c }}" {{ 'selected' if c == selected else '' }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-search">Search</button>
+    </form>
+  </section>
+
+  <section class="cards">
+    {% for b in cards %}
+      <article class="card">
+        <img class="cover" src="{{ b.img }}" alt="{{ b.title }} cover">
+        <div class="card-body">
+          <h2 class="title">{{ b.title }}</h2>
+          <div class="byline">By {{ b.authors }}</div>
+          <div class="meta">
+            Category: {{ b.category_line }}<br>
+            Pages: {{ b.pages }}
+          </div>
+          <p class="desc">{{ b.short_desc }}</p>
+          <a class="btn btn-details" href="{{ url_for('book_details', title=b.title) }}">More details</a>
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+{% endblock %}
