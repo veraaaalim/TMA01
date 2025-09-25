@@ -1,27 +1,52 @@
 {% extends "base.html" %}
-{% block content %}
 
-  <header class="page-header">
-    <h1>{{ book.title }}</h1>
+{% block title %}Book Details • SG Library{% endblock %}
+
+{% block content %}
+  <!-- Desktop/Tablet (md+) green strip -->
+  <header class="page-header desktop-title">
+    <h1>BOOK DETAILS</h1>
   </header>
 
-  <article class="book-detail">
-    <img class="cover" src="{{ book.url }}" alt="{{ book.title }} cover">
+  <article class="details-card">
+    <img class="cover-lg" src="{{ book.url }}" alt="{{ book.title }} cover">
 
-    <div class="book-info">
-      <div class="byline">By {{ ", ".join(book.authors) }}</div>
+    <div class="details-body">
+      <h2 class="title">{{ book.title }}</h2>
+
+      <div class="byline">
+        By {{ ", ".join(book.authors) }}
+        {% if book.get('illustrator') %}, {{ book.illustrator }} (Illustrator){% endif %}
+      </div>
+
       <div class="meta">
         Category: {{ book.category }}, {{ ", ".join(book.genres) }}<br>
         Pages: {{ book.pages }}<br>
-        Copies: {{ book.copies }} (Available: {{ book.available }})
+        {% if book.get('copies') %}Copies: {{ book.copies }}{% endif %}
+        {% if book.get('available') is not none %} | Available: {{ 1 if book.available else 0 }}{% endif %}
       </div>
 
       <div class="desc">
-        {% for p in book.description %}
-          <p>{{ p }}</p>
+        {% for para in book.description %}
+          {% if para and para.strip() %}
+            <p>{{ para }}</p>
+          {% endif %}
         {% endfor %}
+      </div>
+
+      <div class="actions">
+        <a class="btn btn-back"
+           href="{{ url_for('titles_page', category=request.args.get('from', 'All')) }}">
+          Back to list
+        </a>
       </div>
     </div>
   </article>
+{% endblock %}
 
+{% block banner_title %}
+  <!-- On small/medium screens the green title strip lives inside the slide-down panel -->
+  <div class="page-header banner-title" style="margin:0">
+    <h1>BOOK DETAILS</h1>
+  </div>
 {% endblock %}
