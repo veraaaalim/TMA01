@@ -1,0 +1,244 @@
+/* ========== Design tokens ========== */
+:root{
+  --sidebar-w: 220px;
+  --green-100:#e9f5ec; --green-200:#dfeee5; --green-300:#cfe9d6;
+  --green-600:#5ea770; --green-700:#4a9e62;
+  --ink:#2e3a3b; --muted:#6c7a7a;
+  --bg:#f4f6f5; --card:#fff;
+  --shadow:0 1px 3px rgba(0,0,0,.18);
+
+  --panel-h: 150px; /* Banner height */
+  --gap-after-header: 8px;
+}
+
+/* Reset-ish */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; display:flex; color:var(--ink); background:var(--bg);
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+}
+
+/* ========== Hamburger ========== */
+.hamburger{
+  display:none; position:fixed; top:10px; right:12px; z-index:110;
+  width:40px; height:32px; border:1px solid #cfdad1; border-radius:8px; background:#fff; cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+  align-items:center; justify-content:center; gap:5px; flex-direction:column;
+}
+.hamburger span{width:20px; height:2px; background:var(--ink); border-radius:2px; transition:.25s}
+
+/* ========== Sidebar (desktop only) ========== */
+.sidebar{
+  width:var(--sidebar-w); position:fixed; left:0; top:0; height:100vh; z-index:10;
+  color:#fff;
+  background:
+    linear-gradient(rgba(70,64,156,.35), rgba(0,0,0,.7)),
+    url("https://library.suss.edu.sg/wp-content/uploads/2023/11/Study-Space_High-table-2-cropped.png");
+  background-size:cover; background-repeat:no-repeat; background-position:top center;
+  background-attachment:fixed;
+  box-shadow:5px 7px 25px #9998;
+  display:flex; flex-direction:column;
+}
+
+/* Desktop brand/header */
+.brand-desktop{
+  padding:14px 12px 10px;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.25);
+}
+.brand-desktop .brand-name{
+  font-size:18px;
+  font-weight:600;
+  letter-spacing:.3px;
+}
+.brand-desktop .brand-rule{
+  height:1px;
+  background:rgba(255,255,255,.65);
+  margin-top:6px;
+  border-radius:1px;
+}
+
+/* Desktop nav */
+.nav{padding:8px}
+.nav-link{display:block;color:#fff;text-decoration:none;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.12)}
+.nav-link:hover{background:rgba(255,255,255,.18)}
+.nav-link.active{background:rgba(255,255,255,.22)}
+
+.sidebar-photo{flex:1}
+
+/* Hidden on desktop; shown on md/sm */
+.sidebar-banner{display:none}
+
+/* ========== Main content ========== */
+.content{
+  margin-left:var(--sidebar-w);
+  padding:18px 22px;
+  max-width:1080px;
+  flex:1;
+  transition: margin-top .35s ease;
+}
+
+/* Header (BOOK TITLES / BOOK DETAILS) */
+.page-header{
+  background:var(--green-100);
+  border-bottom:2px solid var(--green-600);
+  padding:12px 16px;
+  margin-bottom:0;
+}
+.page-header h1{
+  margin:0;
+  font-size:20px;
+  font-weight:500;
+  letter-spacing:.5px;
+  color:#000;
+  text-transform:uppercase;
+}
+
+/* ===== Filter bar (one line + green background) ===== */
+.content > :where(section).topbar{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:12px !important;
+  background:var(--green-200) !important;
+  border:1px solid var(--green-300) !important;
+  border-top:0 !important;
+  padding:8px 16px !important;
+  margin-bottom:var(--gap-after-header) !important;
+  border-radius:0 0 6px 6px !important;
+  box-shadow:var(--shadow) !important;
+  white-space:nowrap !important;
+}
+.content > .topbar .count{ font-weight:500; margin-right:auto !important; }
+.content > .topbar .filter{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  margin-left:auto !important;
+}
+.content > .topbar label{ font-size:14px; margin-right:4px; }
+.content > .topbar select{
+  padding:4px 6px; border:1px solid var(--green-300); border-radius:4px; background:#fff;
+}
+.btn.btn-search{
+  background:var(--green-700); color:#fff; border:0; border-radius:4px; padding:6px 12px; cursor:pointer;
+}
+
+/* Cards */
+.cards{display:grid; gap:1rem; grid-template-columns:1fr;}
+.card{display:flex; gap:16px; background:var(--card); border-radius:6px; padding:14px; box-shadow:var(--shadow)}
+.cover{width:120px; height:auto; object-fit:contain; border-radius:4px; flex-shrink:0}
+.card-body{flex:1}
+.title{margin:0; font-size:18px}
+.byline{margin:6px 0; color:#fff}
+.meta{font-size:13px; color:#61706b}
+.desc{margin:10px 0; white-space:pre-line; line-height:1.45}
+.actions{display:flex; justify-content:flex-end}
+.btn{border:0; border-radius:4px; padding:6px 10px; cursor:pointer}
+.btn-details{background:var(--green-700); color:#fff; text-decoration:none}
+.btn-back{background:var(--green-700); color:#fff; text-decoration:none; padding:8px 14px; border-radius:4px;}
+
+/* Details card */
+.details-card{
+  display:grid; grid-template-columns:200px 1fr; gap:1.1rem;
+  background:#fff; border-radius:12px; padding:1rem; box-shadow:0 2px 10px rgba(0,0,0,.06);
+  color:#000;
+}
+.details-card .byline,.details-card .meta,.details-card .desc{color:#000}
+.cover-lg{width:200px; height:auto; object-fit:cover; border-radius:8px; flex-shrink:0}
+
+/* ========== Responsive ========== */
+@media (min-width:768px){ .hamburger{display:none} }
+
+@media (max-width:991.98px){
+  body{display:block}
+  .hamburger{display:flex}
+
+  /* Hide desktop-only elements on md/sm */
+  .brand-desktop{ display:none !important; }
+  .desktop-title{ display:none !important; }
+
+  /* Slide-down top panel (banner) */
+  .sidebar{
+    position:fixed; left:0; top:0; width:100%;
+    height:var(--panel-h);
+    transform:translateY(-100%); transition:transform .35s ease;
+    z-index:100; box-shadow:0 4px 18px rgba(0,0,0,.16);
+    overflow:hidden; background:none; border:0;
+  }
+  body.menu-open .sidebar{transform:translateY(0)}
+
+  /* Hide desktop nav/photo in panel mode */
+  .nav, .sidebar-photo{display:none !important}
+
+  /* Show the banner in panel mode */
+  .sidebar-banner{display:block !important}
+
+  .sidebar-banner{
+    width:100%; height:var(--panel-h);
+    position:relative;
+    background:
+      linear-gradient(rgba(0,0,0,.12), rgba(0,0,0,.25)),
+      url("https://library.suss.edu.sg/wp-content/uploads/2023/11/Study-Space_High-table-2-cropped.png");
+    background-size:cover; background-position:center;
+    text-shadow:0 1px 2px rgba(0,0,0,.55);
+  }
+  .sidebar-banner .brand-text{
+    position:absolute; left:50%; transform:translateX(-50%); top:14px;
+    color:#fff; font-size:14px; font-weight:400; letter-spacing:.3px; margin:0;
+  }
+
+  /* NEW: banner nav (md/sm only) */
+  .sidebar-banner .banner-nav{
+    position:absolute; left:12px; top:50px;
+    display:flex; gap:8px;
+  }
+  .sidebar-banner .banner-link{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:rgba(255,255,255,.18);
+    color:#fff; text-decoration:none; font-size:14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.15);
+  }
+  .sidebar-banner .banner-link:hover{ background:rgba(255,255,255,.24); }
+  .sidebar-banner .banner-link.active{ background:rgba(255,255,255,.28); }
+
+  .sidebar-banner::after{ content:""; position:absolute; left:6%; right:6%; top:44%; height:1px; background:rgba(255,255,255,.75); }
+  .sidebar-banner .crumb{ position:absolute; left:16px; top: calc(44% + 8px); color:#fff; font-size:14px; opacity:.95; }
+
+  .sidebar-banner .page-header{
+    position:absolute; left:0; right:0; bottom:0;
+    margin:0; padding:10px 14px;
+    background:var(--green-100); border-top:2px solid var(--green-600);
+    border-radius:0; box-shadow:none; display:none;
+  }
+  body.menu-open .sidebar-banner .page-header{ display:block; }
+  .sidebar-banner .page-header h1{ color:#000; font-size:18px; font-weight:500; letter-spacing:.4px; text-transform:uppercase; margin:0; }
+
+  .content{ margin-left:0 !important; padding:10px 14px; }
+  body.menu-open .content{ margin-top: calc(var(--panel-h) + var(--gap-after-header)); }
+  .content.details-view .page-header{ display:none !important; }
+  body.menu-open .content.details-view{ margin-top: var(--panel-h); }
+}
+
+/* === Small screens (≤767.98px): stack list & details, full-width cover === */
+@media (max-width:767.98px){
+  /* toolbar */
+  .content > .topbar{ flex-wrap:wrap !important; }
+  .content > .topbar .filter{ margin-left:auto !important; }
+
+  /* list cards */
+  .card{ display:flex !important; flex-direction:column !important; padding:0; }
+  .card .cover{
+    order:1 !important; width:100% !important; height:auto; display:block; margin:0;
+    border-radius:6px 6px 0 0; object-fit:contain; align-self:stretch; float:none !important;
+  }
+  .card .card-body{ order:2 !important; width:100%; padding:14px; }
+
+  /* details view */
+  .details-card{ grid-template-columns:1fr !important; }
+  .details-card .details-body{ grid-column:1 / -1; margin-top:.6rem; }
+  .details-card .cover-lg{ width:100%; max-width:none; margin:0 0 .9rem 0; border-radius:12px; }
+}
