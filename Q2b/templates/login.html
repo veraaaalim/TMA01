@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Login • SG Library{% endblock %}
+
+{% block main_header %}
+  <!-- Outer big green header -->
+  <header class="page-header"><h1>LOGIN</h1></header>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <div class="form-card">
+    <!-- Inner grey header -->
+    <div class="form-title">Login</div>
+
+    <form method="post">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="Enter email" required>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Enter password" required>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-submit">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
