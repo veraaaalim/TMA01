@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Add a Book • SG Library{% endblock %}
+
+{% block main_header %}
+  <header class="page-header"><h1>ADD A BOOK</h1></header>
+{% endblock %}
+
+{% block content %}
+<div class="addbook-wrap">
+  <div class="addbook-card">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashwrap" style="margin-bottom:12px">
+          {% for cat, msg in messages %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="addbook-form">
+
+      <!-- Genres (multi) -->
+      <label for="genres" class="lb">Choose multiple<br>Genres:</label>
+      <div class="fld">
+        <select id="genres" name="genres" multiple size="8" class="w-full">
+          {% for g in genres %}
+            <option value="{{ g }}">{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Title -->
+      <label for="title" class="lb">Title:</label>
+      <div class="fld">
+        <input id="title" name="title" type="text" required>
+      </div>
+
+      <!-- Category -->
+      <label for="category" class="lb">Choose a category:</label>
+      <div class="fld">
+        <select id="category" name="category" required>
+          {% for c in categories %}
+            <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- URL -->
+      <label for="url" class="lb">URL for Cover:</label>
+      <div class="fld">
+        <input id="url" name="url" type="url" placeholder="https://...">
+      </div>
+
+      <!-- Description -->
+      <label for="description" class="lb">Description:</label>
+      <div class="fld">
+        <textarea id="description" name="description" rows="9" placeholder=""></textarea>
+      </div>
+
+      <!-- Authors 1..5 with illustrator on right -->
+      {% for i in range(1,6) %}
+        <label for="author{{ i }}" class="lb">Author {{ i }}:</label>
+        <div class="fld fld-author">
+          <input id="author{{ i }}" name="author{{ i }}" type="text">
+          <label class="chk-illus">
+            <input type="checkbox" name="illus{{ i }}"> <span>Illustrator</span>
+          </label>
+        </div>
+      {% endfor %}
+
+      <!-- Pages -->
+      <label for="pages" class="lb">Number of pages:</label>
+      <div class="fld">
+        <input id="pages" name="pages" type="number" min="0" step="1" value="0">
+      </div>
+
+      <!-- Copies -->
+      <label for="copies" class="lb">Number of copies:</label>
+      <div class="fld">
+        <input id="copies" name="copies" type="number" min="0" step="1" value="1">
+      </div>
+
+      <!-- Submit row (empty label cell) -->
+      <div class="lb"></div>
+      <div class="fld actions">
+        <button type="submit" class="btn-submit">Submit</button>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
