@@ -1,4 +1,3 @@
-# app.py (Q2b + Auth)
 from flask import (
     Flask, render_template, request, abort,
     url_for, redirect, flash
@@ -10,6 +9,7 @@ from flask_login import (
     login_required, logout_user, current_user
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 import os, sys
 
 # -------- Flask app --------
@@ -108,11 +108,28 @@ def load_user(user_id):
 # -------- App constants/helpers --------
 CATEGORIES = ["All", "Children", "Teens", "Adult"]
 
+GENRES = [
+    "Animals","Business","Comics","Communication","Dark Academia","Emotion","Fantasy",
+    "Fiction","Friendship","Graphic Novels","Grief","Historical Fiction","Indigenous",
+    "Inspirational","Magic","Mental Health","Nonfiction","Personal Development",
+    "Philosophy","Picture Books","Poetry","Productivity","Psychology","Romance",
+    "School","Self Help"
+]
+
 def first_last(paras):
     parts = [p.strip() for p in paras if p and p.strip()]
     if not parts:
         return ""
     return parts[0] if len(parts) == 1 else f"{parts[0]}\n\n{parts[-1]}"
+
+def admin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if not getattr(current_user, "is_admin", False):
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
 
 # -------- Routes --------
 @app.route("/")
@@ -232,6 +249,71 @@ def logout():
     logout_user()
     flash("Logged out.", "info")
     return redirect(url_for("titles_page"))
+
+# -------- New Book (admin only) --------
+@app.route("/books/new", methods=["GET", "POST"])
+@admin_required
+def new_book():
+    if request.method == "POST":
+        # ---- read fields ----
+        title = request.form.get("title", "").strip()
+        category = request.form.get("category", "").strip()
+        url_ = request.form.get("url", "").strip()
+        description = request.form.get("description", "").splitlines()
+        genres = request.form.getlist("genres")
+
+        # authors (up to 5) + illustrator flags
+        a_names, illustrators = [], []
+        for i in range(1, 6):
+            name = request.form.get(f"author{i}", "").strip()
+            if name:
+                a_names.append(name)
+                if request.form.get(f"illus{i}") == "on":
+                    illustrators.append(name)
+
+        # numeric
+        def as_int(v, default=0):
+            try:
+                return int(v)
+            except Exception:
+                return default
+        pages = as_int(request.form.get("pages", "0"))
+        copies = as_int(request.form.get("copies", "1"))
+
+        # minimal validation
+        if not title:
+            flash("Title is required.", "error")
+            return redirect(url_for("new_book"))
+        if category not in [c for c in CATEGORIES if c != "All"]:
+            flash("Please choose a valid category.", "error")
+            return redirect(url_for("new_book"))
+
+        doc = {
+            "title": title,
+            "authors": a_names,
+            "illustrators": illustrators,   # optional field
+            "category": category,
+            "genres": genres,
+            "url": url_,
+            "description": description,
+            "pages": pages,
+            "copies": copies
+        }
+        try:
+            books_coll.insert_one(doc)
+            flash(f"“{title}” added successfully.", "success")
+        except Exception as e:
+            flash(f"Failed to add book: {e}", "error")
+
+        # stay on same page
+        return redirect(url_for("new_book"))
+
+    # GET
+    return render_template(
+        "new_book.html",
+        categories=[c for c in CATEGORIES if c != "All"],
+        genres=GENRES
+    )
 
 # -------- Main --------
 if __name__ == "__main__":

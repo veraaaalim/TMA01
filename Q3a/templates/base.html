@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <!-- Sidebar (desktop fixed • mobile = collapsible “top panel”) -->
+
+  <!-- Sidebar (desktop fixed • mobile collapsible) -->
   <aside class="sidebar" id="sidebar" aria-label="Primary" aria-hidden="true">
     <div class="brand-desktop">
       <div class="brand-name">SG Library</div>
@@ -16,43 +17,67 @@
 
     <!-- Desktop nav -->
     <nav class="nav" aria-label="Main">
+      {% if current_user.is_authenticated %}
+        <!-- Admin label (not a link) with avatar icon -->
+        <div class="nav-label">
+          <span class="avatar" aria-hidden="true">
+            <!-- simple circle avatar -->
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 20c2.2-4 13.8-4 16 0"></path>
+            </svg>
+          </span>
+          <span>Admin</span>
+        </div>
+      {% endif %}
+
       <a class="nav-link {% if request.path.startswith('/titles') %}active{% endif %}"
          href="{{ url_for('titles_page') }}">
-        <svg aria-hidden="true" viewBox="0 0 24 24" class="nav-ic">
-          <path d="M4.5 5.5h11a2 2 0 0 1 2 2v11h-11a2 2 0 0 1-2-2v-11z"></path>
-          <path d="M7.5 4.5h11a2 2 0 0 1 2 2v11"></path>
-        </svg>
+        <span class="nav-ic">
+          <!-- books icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5h9a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V5z"></path>
+            <path d="M8 3h9a2 2 0 0 1 2 2v12"></path>
+          </svg>
+        </span>
         <span>Book Titles</span>
       </a>
 
-      {% if current_user.is_authenticated %}
-        <div class="nav-sep"></div>
-        <div class="welcome">Hello, {{ current_user.name }}</div>
-        <a class="nav-link" href="{{ url_for('logout') }}">
-          <svg aria-hidden="true" viewBox="0 0 24 24" class="nav-ic">
-            <path d="M10 6h-4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
-            <path d="M13 16l4-4-4-4"></path>
-            <path d="M17 12H10"></path>
+      {% if current_user.is_authenticated and current_user.is_admin %}
+      <a class="nav-link {% if request.path.startswith('/books/new') %}active{% endif %}"
+         href="{{ url_for('new_book') }}">
+        <span class="nav-ic">
+          <!-- home/upload-ish icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3l9 8h-3v7h-12v-7H3z"></path>
+            <path d="M12 12v6"></path>
           </svg>
-          <span>Logout</span>
-        </a>
-      {% else %}
+        </span>
+        <span>New Book</span>
+      </a>
+      {% endif %}
+
+      {% if not current_user.is_authenticated %}
+        <div class="nav-sep"></div>
         <a class="nav-link {% if request.path.startswith('/login') %}active{% endif %}"
            href="{{ url_for('login') }}">
-          <svg aria-hidden="true" viewBox="0 0 24 24" class="nav-ic">
-            <path d="M10 6h-4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
-            <path d="M13 16l4-4-4-4"></path>
-            <path d="M17 12H10"></path>
-          </svg>
+          <span class="nav-ic">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
+              <path d="M13 16l4-4-4-4"></path>
+              <path d="M17 12H10"></path>
+            </svg>
+          </span>
           <span>Login</span>
         </a>
-
         <a class="nav-link {% if request.path.startswith('/register') %}active{% endif %}"
            href="{{ url_for('register') }}">
-          <svg aria-hidden="true" viewBox="0 0 24 24" class="nav-ic">
-            <circle cx="9" cy="8" r="3"></circle>
-            <path d="M15 20v-3a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v3"></path>
-          </svg>
+          <span class="nav-ic">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="9" cy="8" r="3"></circle>
+              <path d="M15 20v-3a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v3"></path>
+            </svg>
+          </span>
           <span>Register</span>
         </a>
       {% endif %}
@@ -64,27 +89,36 @@
     <!-- Mobile/Tablet slide-down banner -->
     <div class="sidebar-banner">
       <div class="brand-text">SG Library</div>
-
       <nav class="banner-nav" aria-label="Banner">
+        {% if current_user.is_authenticated %}
+          <span class="banner-label">Admin</span>
+        {% endif %}
         <a class="banner-link {% if request.path.startswith('/titles') %}active{% endif %}"
            href="{{ url_for('titles_page') }}">Book Titles</a>
-
-        {% if current_user.is_authenticated %}
-          <a class="banner-link" href="{{ url_for('logout') }}">Logout</a>
-        {% else %}
+        {% if current_user.is_authenticated and current_user.is_admin %}
+          <a class="banner-link {% if request.path.startswith('/books/new') %}active{% endif %}"
+             href="{{ url_for('new_book') }}">New Book</a>
+        {% endif %}
+        {% if not current_user.is_authenticated %}
           <a class="banner-link {% if request.path.startswith('/login') %}active{% endif %}"
              href="{{ url_for('login') }}">Login</a>
           <a class="banner-link {% if request.path.startswith('/register') %}active{% endif %}"
              href="{{ url_for('register') }}">Register</a>
         {% endif %}
       </nav>
-
       {% block banner_title %}{% endblock %}
     </div>
   </aside>
 
   <!-- Main content -->
   <main class="content">
+    {% if current_user.is_authenticated %}
+      <!-- Top-right green pill logout -->
+      <div class="top-right-actions">
+        <a class="btn-logout" href="{{ url_for('logout') }}">Logout</a>
+      </div>
+    {% endif %}
+
     {% with msgs = get_flashed_messages(with_categories=true) %}
       {% if msgs %}
         <div class="flashwrap">
@@ -112,19 +146,14 @@
     (function () {
       const btn = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');
-
       function setOpen(open) {
         document.body.classList.toggle('menu-open', open);
         btn.setAttribute('aria-expanded', String(open));
         sidebar.setAttribute('aria-hidden', String(!open));
       }
-
-      btn.addEventListener('click', () => {
-        setOpen(!document.body.classList.contains('menu-open'));
-      });
-
+      btn.addEventListener('click', () => setOpen(!document.body.classList.contains('menu-open')));
       sidebar.addEventListener('click', (e) => {
-        if (e.target.matches('a.nav-link, a.banner-link')) setOpen(false);
+        if (e.target.closest('a.nav-link, a.banner-link')) setOpen(false);
       });
     })();
   </script>
