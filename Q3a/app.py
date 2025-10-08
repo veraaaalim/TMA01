@@ -254,6 +254,9 @@ def logout():
 @app.route("/books/new", methods=["GET", "POST"])
 @admin_required
 def new_book():
+    if not current_user.is_admin:
+        flash("Only admin users can add new books.", "error")
+        return redirect(url_for("titles_page"))
     if request.method == "POST":
         # ---- read fields ----
         title = request.form.get("title", "").strip()
