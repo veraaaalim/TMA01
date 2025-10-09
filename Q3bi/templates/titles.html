@@ -3,12 +3,10 @@
 {% block title %}Book Titles • SG Library{% endblock %}
 
 {% block content %}
-  <!-- Desktop-only green strip -->
   <header class="page-header desktop-title">
     <h1>BOOK TITLES</h1>
   </header>
 
-  <!-- Count + Category + Search -->
   <section class="topbar">
     <div class="count">Number of titles: {{ total }}</div>
 
@@ -30,7 +28,6 @@
     </form>
   </section>
 
-  <!-- Cards -->
   <section class="cards">
     {% if cards and cards|length > 0 %}
       {% for b in cards %}
@@ -46,16 +43,30 @@
               </a>
             </h2>
 
-            <div class="byline">By {{ b.authors }}</div>
+            {% if b.authors %}
+              <div class="byline">By {{ b.authors }}</div>
+            {% endif %}
 
             <div class="meta">
               Category: {{ b.category_line }}<br>
-              Pages: {{ b.pages }}
+              {% if b.pages %}Pages: {{ b.pages }}{% endif %}
+              {# Copies intentionally hidden on titles page #}
             </div>
 
-            <p class="desc">{{ b.short_desc }}</p>
+            {% if b.short_desc %}
+              <p class="desc">{{ b.short_desc }}</p>
+            {% endif %}
 
-            <div class="actions">
+            <div class="actions" style="display:flex;gap:8px;">
+              {# Show only if available count/flag > 0 #}
+              {% if b.available|default(0)|int > 0 %}
+                <a class="btn btn-loan"
+                   href="{{ url_for('make_loan', id=b._id) }}"
+                   style="background:#2f855a;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;">
+                  Make a Loan
+                </a>
+              {% endif %}
+
               <a class="btn btn-details"
                  href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
                 More details
@@ -73,7 +84,6 @@
 {% endblock %}
 
 {% block banner_title %}
-  <!-- Mobile/Tablet: title placed inside the slide-down panel -->
   <div class="page-header banner-title" style="margin:0">
     <h1>BOOK TITLES</h1>
   </div>

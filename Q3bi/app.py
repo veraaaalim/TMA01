@@ -29,13 +29,19 @@ db = client["sg_library"]
 books_coll = db["books"]
 users_coll = db["users"]
 
-# ---- Seed Books from provided list on first run ----
+# ---- Seed Books ----
 from books import all_books  # source data for seeding
 
 def seed_books_if_empty(coll, all_books):
     if coll.estimated_document_count() == 0:
         docs = []
         for b in all_books:
+            # robust int handling for copies
+            copies_val = 0
+            raw = str(b.get("copies", "")).strip()
+            if raw.isdigit():
+                copies_val = int(raw)
+
             docs.append({
                 "title": b.get("title", ""),
                 "authors": b.get("authors", []),
@@ -43,9 +49,10 @@ def seed_books_if_empty(coll, all_books):
                 "genres": b.get("genres", []),
                 "url": b.get("url", ""),
                 "description": b.get("description", []),
-                "pages": b.get("pages", 0),
-                "copies": b.get("copies", 0),
-                "available": 1 if b.get("available") else 0
+                "pages": int(b.get("pages", 0) or 0),
+                "copies": copies_val,
+                # convenience flag; some datasets may later store a COUNT here
+                "available": 1 if copies_val > 0 else 0
             })
         if docs:
             coll.insert_many(docs)
@@ -64,7 +71,7 @@ try:
 except Exception as e:
     print(f"[Seed WARNING] {e}", file=sys.stderr)
 
-# ---- Seed default users (required by the question) ----
+# ---- Seed default users ----
 def seed_users_if_empty():
     if users_coll.estimated_document_count() == 0:
         users_coll.insert_many([
@@ -89,8 +96,12 @@ try:
 except Exception as e:
     print(f"[User Seed WARNING] {e}", file=sys.stderr)
 
-# -------- Auth (Flask-Login) --------
+# -------- Auth setup --------
 login_manager = LoginManager(app)
+@login_manager.user_loader
+def load_user(user_id):
+    doc = users_coll.find_one({"_id": ObjectId(user_id)})
+    return User(doc) if doc else None
 login_manager.login_view = "login"
 
 class User(UserMixin):
@@ -100,12 +111,7 @@ class User(UserMixin):
         self.name = doc.get("name", "")
         self.is_admin = bool(doc.get("is_admin", False))
 
-@login_manager.user_loader
-def load_user(user_id):
-    doc = users_coll.find_one({"_id": ObjectId(user_id)})
-    return User(doc) if doc else None
-
-# -------- App constants/helpers --------
+# -------- Constants --------
 CATEGORIES = ["All", "Children", "Teens", "Adult"]
 
 GENRES = [
@@ -136,6 +142,7 @@ def admin_required(view):
 def home():
     return redirect(url_for("titles_page"))
 
+# ---- Book Titles ----
 @app.route("/titles")
 def titles_page():
     selected = request.args.get("category", "All")
@@ -145,15 +152,17 @@ def titles_page():
     if selected and selected != "All":
         base_filter["category"] = selected
 
-    fields = {"title": 1, "authors": 1, "url": 1, "category": 1, "genres": 1, "pages": 1, "description": 1}
+    # We no longer fetch "copies" for the titles page since we don't display it.
+    fields = {
+        "title": 1, "authors": 1, "url": 1, "category": 1,
+        "genres": 1, "pages": 1, "description": 1,
+        "available": 1
+    }
 
     if q:
-        # Try text search first
         text_filter = dict(base_filter)
         text_filter["$text"] = {"$search": q}
         docs = list(books_coll.find(text_filter, fields).sort("title", 1))
-
-        # Fallback to regex if nothing found
         if not docs:
             rx = {"$regex": q, "$options": "i"}
             rx_filter = {
@@ -164,15 +173,32 @@ def titles_page():
     else:
         docs = list(books_coll.find(base_filter, fields).sort("title", 1))
 
-    cards = [{
-        "_id": str(d["_id"]),
-        "title": d.get("title", ""),
-        "authors": ", ".join(d.get("authors", [])),
-        "img": d.get("url", ""),
-        "category_line": f"{d.get('category', '')}, " + ", ".join(d.get("genres", [])),
-        "pages": d.get("pages", 0),
-        "short_desc": first_last(d.get("description", []))
-    } for d in docs]
+    def as_int(v, default=0):
+        try:
+            return int(v)
+        except Exception:
+            return default
+
+    cards = []
+    for d in docs:
+        category = d.get("category", "")
+        genres = ", ".join(d.get("genres", []))
+        category_line = f"{category}" + (f", {genres}" if genres else "")
+
+        # IMPORTANT: use the DB's 'available' field DIRECTLY (can be 0/1 or a count),
+        # do NOT recompute from 'copies', so the Make Loan button respects real availability.
+        available_count = as_int(d.get("available", 0))
+
+        cards.append({
+            "_id": str(d["_id"]),
+            "title": d.get("title", ""),
+            "authors": ", ".join(d.get("authors", [])),
+            "img": d.get("url", ""),
+            "category_line": category_line,
+            "pages": as_int(d.get("pages", 0)),
+            "available": available_count,   # pass through
+            "short_desc": first_last(d.get("description", []))
+        })
 
     return render_template(
         "titles.html",
@@ -183,6 +209,7 @@ def titles_page():
         q=q
     )
 
+# ---- Book Details ----
 @app.route("/book/<id>")
 def book_details(id):
     try:
@@ -192,38 +219,48 @@ def book_details(id):
     d = books_coll.find_one({"_id": obj_id})
     if not d:
         abort(404)
+
+    # compute helpers for template (kept as-is)
+    copies_val = int(d.get("copies", 0) or 0)
+    d["has_copies"] = copies_val > 0
     d["_id"] = str(d["_id"])
+
     return render_template("book_details.html", book=d)
 
-# -------- Auth pages --------
-@app.route("/register", methods=["GET", "POST"])
+# ---- Make Loan (placeholder for now) ----
+@app.route("/loan/<id>")
+@login_required
+def make_loan(id):
+    """Placeholder for Part (c) — Make a Loan feature"""
+    flash("Loan function not yet implemented (coming in part c).", "info")
+    return redirect(url_for("titles_page"))
+
+# ---- Auth pages ----
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    if current_user.is_authenticated:
-        return redirect(url_for("titles_page"))
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        name = request.form['name']
 
-    if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "").strip()
-        name = request.form.get("name", "").strip()
+        # 🔹 FIX: specify pbkdf2 explicitly instead of default (scrypt)
+        from werkzeug.security import generate_password_hash
+        hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
 
-        if not email or not password or not name:
-            flash("Please fill in all fields.", "error")
-            return redirect(url_for("register"))
-
-        if users_coll.find_one({"email": email}):
-            flash("Email already registered.", "error")
-            return redirect(url_for("register"))
-
-        users_coll.insert_one({
+        user_doc = {
             "email": email,
-            "password": generate_password_hash(password),
-            "name": name,
-            "is_admin": email == "admin@lib.sg"
-        })
-        flash("Registered successfully. Please log in.", "success")
-        return redirect(url_for("login"))
+            "password": hashed_pw,
+            "name": name
+        }
 
-    return render_template("register.html")
+        # insert user_doc into your MongoDB or JSON file
+        users.insert_one(user_doc)
+
+        flash("Account created successfully!", "success")
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -250,22 +287,21 @@ def logout():
     flash("Logged out.", "info")
     return redirect(url_for("titles_page"))
 
-# -------- New Book (admin only) --------
+# ---- New Book (admin only) ----
 @app.route("/books/new", methods=["GET", "POST"])
 @admin_required
 def new_book():
     if not current_user.is_admin:
         flash("Only admin users can add new books.", "error")
         return redirect(url_for("titles_page"))
+
     if request.method == "POST":
-        # ---- read fields ----
         title = request.form.get("title", "").strip()
         category = request.form.get("category", "").strip()
         url_ = request.form.get("url", "").strip()
         description = request.form.get("description", "").splitlines()
         genres = request.form.getlist("genres")
 
-        # authors (up to 5) + illustrator flags
         a_names, illustrators = [], []
         for i in range(1, 6):
             name = request.form.get(f"author{i}", "").strip()
@@ -274,7 +310,6 @@ def new_book():
                 if request.form.get(f"illus{i}") == "on":
                     illustrators.append(name)
 
-        # numeric
         def as_int(v, default=0):
             try:
                 return int(v)
@@ -283,7 +318,6 @@ def new_book():
         pages = as_int(request.form.get("pages", "0"))
         copies = as_int(request.form.get("copies", "1"))
 
-        # minimal validation
         if not title:
             flash("Title is required.", "error")
             return redirect(url_for("new_book"))
@@ -294,13 +328,14 @@ def new_book():
         doc = {
             "title": title,
             "authors": a_names,
-            "illustrators": illustrators,   # optional field
+            "illustrators": illustrators,
             "category": category,
             "genres": genres,
             "url": url_,
             "description": description,
             "pages": pages,
-            "copies": copies
+            "copies": copies,
+            "available": 1 if copies > 0 else 0
         }
         try:
             books_coll.insert_one(doc)
@@ -308,17 +343,15 @@ def new_book():
         except Exception as e:
             flash(f"Failed to add book: {e}", "error")
 
-        # stay on same page
         return redirect(url_for("new_book"))
 
-    # GET
     return render_template(
         "new_book.html",
         categories=[c for c in CATEGORIES if c != "All"],
         genres=GENRES
     )
 
-# -------- Main --------
+# ---- Main ----
 if __name__ == "__main__":
     host = "0.0.0.0"
     port = int(os.getenv("PORT", "8080"))
