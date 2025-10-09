@@ -1,4 +1,5 @@
-# app.py (Q2b + Auth)
+# app.py (Q2b + Auth — One-time MongoDB Seeding + Login System)
+
 from flask import (
     Flask, render_template, request, abort,
     url_for, redirect, flash
@@ -16,9 +17,10 @@ import os, sys
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET", "dev-secret-change-me")
 
-# -------- MongoDB --------
+# -------- MongoDB connection --------
 MONGO_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017")
 client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+
 try:
     client.admin.command("ping")
     print(f"[MongoDB] Connected to {MONGO_URI}")
@@ -29,60 +31,63 @@ db = client["sg_library"]
 books_coll = db["books"]
 users_coll = db["users"]
 
-# ---- Seed Books from provided list on first run ----
+# ---- Seed Books (only once if empty) ----
 from books import all_books  # source data for seeding
 
 def seed_books_if_empty(coll, all_books):
+    """Seeds the books collection if it is empty."""
     if coll.estimated_document_count() == 0:
         docs = []
         for b in all_books:
+            available_val = b.get("available", 0)
+            print(f"Seeding {b.get('title', '')[:25]}... Available = {available_val}")  # 👈 Debug check
+
             docs.append({
-                "title": b.get("title", ""),
+                "title": b.get("title", "").strip(),
                 "authors": b.get("authors", []),
-                "category": b.get("category", ""),
+                "category": b.get("category", "").strip(),
                 "genres": b.get("genres", []),
-                "url": b.get("url", ""),
+                "url": b.get("url", "").strip(),
                 "description": b.get("description", []),
-                "pages": b.get("pages", 0),
-                "copies": b.get("copies", 0),
-                "available": 1 if b.get("available") else 0
+                "pages": int(b.get("pages", 0)) if b.get("pages") else 0,
+                "copies": int(b.get("copies", 0)) if b.get("copies") else 0,
+                "available": int(available_val) if available_val is not None else 0  # ✅
             })
-        if docs:
-            coll.insert_many(docs)
-            coll.create_index("title")
-            coll.create_index("category")
-            coll.create_index([
-                ("title", "text"),
-                ("authors", "text"),
-                ("genres", "text"),
-                ("description", "text")
-            ])
-            print("[MongoDB] Seeded books and created indexes")
 
-try:
-    seed_books_if_empty(books_coll, all_books)
-except Exception as e:
-    print(f"[Seed WARNING] {e}", file=sys.stderr)
+        coll.insert_many(docs)
+        coll.create_index("title")
+        coll.create_index("category")
+        coll.create_index([
+            ("title", "text"),
+            ("authors", "text"),
+            ("genres", "text"),
+            ("description", "text")
+        ])
+        print(f"[MongoDB] ✅ Seeded {len(docs)} books and created indexes")
+    else:
+        print("[MongoDB] ⚙️ Books already exist — skipping reseed")
 
-# ---- Seed default users (required by the question) ----
+
+# ---- Seed default users (only once) ----
 def seed_users_if_empty():
+    """Seeds default users if none exist."""
     if users_coll.estimated_document_count() == 0:
         users_coll.insert_many([
             {
                 "email": "admin@lib.sg",
-                "password": generate_password_hash("12345"),
+                "password": generate_password_hash("12345", method="pbkdf2:sha256"),
                 "name": "Admin",
                 "is_admin": True
             },
             {
                 "email": "poh@lib.sg",
-                "password": generate_password_hash("12345"),
+                "password": generate_password_hash("12345", method="pbkdf2:sha256"),
                 "name": "Peter Oh",
                 "is_admin": False
             }
         ])
         users_coll.create_index("email", unique=True)
-        print("[MongoDB] Seeded default users")
+        print("[MongoDB] ✅ Seeded default users")
 
 try:
     seed_users_if_empty()
@@ -105,11 +110,11 @@ def load_user(user_id):
     doc = users_coll.find_one({"_id": ObjectId(user_id)})
     return User(doc) if doc else None
 
-# -------- App constants/helpers --------
+# -------- Constants/helpers --------
 CATEGORIES = ["All", "Children", "Teens", "Adult"]
 
 def first_last(paras):
-    parts = [p.strip() for p in paras if p and p.strip()]
+    parts = [p.strip() for p in (paras or []) if p and p.strip()]
     if not parts:
         return ""
     return parts[0] if len(parts) == 1 else f"{parts[0]}\n\n{parts[-1]}"
@@ -128,20 +133,28 @@ def titles_page():
     if selected and selected != "All":
         base_filter["category"] = selected
 
-    fields = {"title": 1, "authors": 1, "url": 1, "category": 1, "genres": 1, "pages": 1, "description": 1}
+    fields = {
+        "title": 1, "authors": 1, "url": 1,
+        "category": 1, "genres": 1, "pages": 1, "description": 1
+    }
 
     if q:
-        # Try text search first
+        # Text search first
         text_filter = dict(base_filter)
         text_filter["$text"] = {"$search": q}
         docs = list(books_coll.find(text_filter, fields).sort("title", 1))
 
-        # Fallback to regex if nothing found
+        # Fallback to regex
         if not docs:
             rx = {"$regex": q, "$options": "i"}
             rx_filter = {
                 **base_filter,
-                "$or": [{"title": rx}, {"authors": rx}, {"genres": rx}, {"description": rx}]
+                "$or": [
+                    {"title": rx},
+                    {"authors": rx},
+                    {"genres": rx},
+                    {"description": rx}
+                ]
             }
             docs = list(books_coll.find(rx_filter, fields).sort("title", 1))
     else:
@@ -173,12 +186,14 @@ def book_details(id):
     except Exception:
         abort(404)
     d = books_coll.find_one({"_id": obj_id})
+    print("DEBUG:", d)
+
     if not d:
         abort(404)
     d["_id"] = str(d["_id"])
     return render_template("book_details.html", book=d)
 
-# -------- Auth pages --------
+# -------- Auth Pages --------
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -199,7 +214,7 @@ def register():
 
         users_coll.insert_one({
             "email": email,
-            "password": generate_password_hash(password),
+            "password": generate_password_hash(password, method="pbkdf2:sha256"),
             "name": name,
             "is_admin": email == "admin@lib.sg"
         })
@@ -230,7 +245,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash("Logged out.", "info")
+    flash("Logged out successfully.", "info")
     return redirect(url_for("titles_page"))
 
 # -------- Main --------
