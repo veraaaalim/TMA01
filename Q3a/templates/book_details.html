@@ -23,7 +23,7 @@
         Category: {{ book.category }}, {{ ", ".join(book.genres) }}<br>
         Pages: {{ book.pages }}<br>
         {% if book.get('copies') %}Copies: {{ book.copies }}{% endif %}
-        {% if book.get('available') is not none %} | Available: {{ 1 if book.available else 0 }}{% endif %}
+        {% if book.get('available') is not none %} | Available: {{ book.available }}{% endif %}
       </div>
 
       <div class="desc">
