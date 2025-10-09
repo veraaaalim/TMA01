@@ -1,21 +1,13 @@
-# app.py (Q2b + Auth — One-time MongoDB Seeding + Login System)
-
 from flask import (
     Flask, render_template, request, abort,
-    url_for, redirect, flash
+    url_for, redirect
 )
 from pymongo import MongoClient, errors
 from bson import ObjectId
-from flask_login import (
-    LoginManager, UserMixin, login_user,
-    login_required, logout_user, current_user
-)
-from werkzeug.security import generate_password_hash, check_password_hash
 import os, sys
 
 # -------- Flask app --------
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET", "dev-secret-change-me")
 
 # -------- MongoDB connection --------
 MONGO_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017")
@@ -29,7 +21,6 @@ except errors.ServerSelectionTimeoutError as e:
 
 db = client["sg_library"]
 books_coll = db["books"]
-users_coll = db["users"]
 
 # ---- Seed Books (only once if empty) ----
 from books import all_books  # source data for seeding
@@ -68,48 +59,6 @@ try:
 except Exception as e:
     print(f"[Seed WARNING] {e}", file=sys.stderr)
 
-# ---- Seed default users (only once) ----
-def seed_users_if_empty():
-    """Seeds default users if none exist."""
-    if users_coll.estimated_document_count() == 0:
-        users_coll.insert_many([
-            {
-                "email": "admin@lib.sg",
-                "password": generate_password_hash("12345", method="pbkdf2:sha256"),
-                "name": "Admin",
-                "is_admin": True
-            },
-            {
-                "email": "poh@lib.sg",
-                "password": generate_password_hash("12345", method="pbkdf2:sha256"),
-                "name": "Peter Oh",
-                "is_admin": False
-            }
-        ])
-        users_coll.create_index("email", unique=True)
-        print("[MongoDB] ✅ Seeded default users")
-
-try:
-    seed_users_if_empty()
-except Exception as e:
-    print(f"[User Seed WARNING] {e}", file=sys.stderr)
-
-# -------- Auth (Flask-Login) --------
-login_manager = LoginManager(app)
-login_manager.login_view = "login"
-
-class User(UserMixin):
-    def __init__(self, doc):
-        self.id = str(doc["_id"])
-        self.email = doc["email"]
-        self.name = doc.get("name", "")
-        self.is_admin = bool(doc.get("is_admin", False))
-
-@login_manager.user_loader
-def load_user(user_id):
-    doc = users_coll.find_one({"_id": ObjectId(user_id)})
-    return User(doc) if doc else None
-
 # -------- Constants/helpers --------
 CATEGORIES = ["All", "Children", "Teens", "Adult"]
 
@@ -133,8 +82,10 @@ def titles_page():
     if selected and selected != "All":
         base_filter["category"] = selected
 
-    fields = {"title": 1, "authors": 1, "url": 1,
-              "category": 1, "genres": 1, "pages": 1, "description": 1}
+    fields = {
+        "title": 1, "authors": 1, "url": 1,
+        "category": 1, "genres": 1, "pages": 1, "description": 1
+    }
 
     if q:
         # Text search first
@@ -188,61 +139,6 @@ def book_details(id):
         abort(404)
     d["_id"] = str(d["_id"])
     return render_template("book_details.html", book=d)
-
-# -------- Auth pages --------
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for("titles_page"))
-
-    if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "").strip()
-        name = request.form.get("name", "").strip()
-
-        if not email or not password or not name:
-            flash("Please fill in all fields.", "error")
-            return redirect(url_for("register"))
-
-        if users_coll.find_one({"email": email}):
-            flash("Email already registered.", "error")
-            return redirect(url_for("register"))
-
-        users_coll.insert_one({
-            "email": email,
-            "password": generate_password_hash(password, method="pbkdf2:sha256"),
-            "name": name,
-            "is_admin": email == "admin@lib.sg"
-        })
-        flash("Registered successfully. Please log in.", "success")
-        return redirect(url_for("login"))
-
-    return render_template("register.html")
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for("titles_page"))
-
-    if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "").strip()
-
-        user_doc = users_coll.find_one({"email": email})
-        if user_doc and check_password_hash(user_doc["password"], password):
-            login_user(User(user_doc))
-            flash("Login successful.", "success")
-            return redirect(url_for("titles_page"))
-        flash("Invalid email or password.", "error")
-
-    return render_template("login.html")
-
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    flash("Logged out.", "info")
-    return redirect(url_for("titles_page"))
 
 # -------- Main --------
 if __name__ == "__main__":
