@@ -18,15 +18,9 @@
     <!-- Desktop nav -->
     <nav class="nav" aria-label="Main">
       {% if current_user.is_authenticated %}
-        <!-- Admin label (not a link) with avatar icon -->
-        <div class="nav-label">
-          <span class="avatar" aria-hidden="true">
-            <!-- simple circle avatar -->
-            <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
-              <circle cx="12" cy="8" r="4"></circle>
-              <path d="M4 20c2.2-4 13.8-4 16 0"></path>
-            </svg>
-          </span>
+        <!-- Admin pill with icon -->
+        <div class="nav-label admin-pill">
+          <span class="avatar" aria-hidden="true"></span>
           <span>Admin</span>
         </div>
       {% endif %}
@@ -34,7 +28,6 @@
       <a class="nav-link {% if request.path.startswith('/titles') %}active{% endif %}"
          href="{{ url_for('titles_page') }}">
         <span class="nav-ic">
-          <!-- books icon -->
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 5h9a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V5z"></path>
             <path d="M8 3h9a2 2 0 0 1 2 2v12"></path>
@@ -47,7 +40,6 @@
       <a class="nav-link {% if request.path.startswith('/books/new') %}active{% endif %}"
          href="{{ url_for('new_book') }}">
         <span class="nav-ic">
-          <!-- home/upload-ish icon -->
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3l9 8h-3v7h-12v-7H3z"></path>
             <path d="M12 12v6"></path>
@@ -56,35 +48,7 @@
         <span>New Book</span>
       </a>
       {% endif %}
-
-      {% if not current_user.is_authenticated %}
-        <div class="nav-sep"></div>
-        <a class="nav-link {% if request.path.startswith('/login') %}active{% endif %}"
-           href="{{ url_for('login') }}">
-          <span class="nav-ic">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
-              <path d="M13 16l4-4-4-4"></path>
-              <path d="M17 12H10"></path>
-            </svg>
-          </span>
-          <span>Login</span>
-        </a>
-        <a class="nav-link {% if request.path.startswith('/register') %}active{% endif %}"
-           href="{{ url_for('register') }}">
-          <span class="nav-ic">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="9" cy="8" r="3"></circle>
-              <path d="M15 20v-3a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v3"></path>
-            </svg>
-          </span>
-          <span>Register</span>
-        </a>
-      {% endif %}
     </nav>
-
-    <!-- Decorative photo area (desktop) -->
-    <div class="sidebar-photo" aria-hidden="true"></div>
 
     <!-- Mobile/Tablet slide-down banner -->
     <div class="sidebar-banner">
@@ -99,12 +63,6 @@
           <a class="banner-link {% if request.path.startswith('/books/new') %}active{% endif %}"
              href="{{ url_for('new_book') }}">New Book</a>
         {% endif %}
-        {% if not current_user.is_authenticated %}
-          <a class="banner-link {% if request.path.startswith('/login') %}active{% endif %}"
-             href="{{ url_for('login') }}">Login</a>
-          <a class="banner-link {% if request.path.startswith('/register') %}active{% endif %}"
-             href="{{ url_for('register') }}">Register</a>
-        {% endif %}
       </nav>
       {% block banner_title %}{% endblock %}
     </div>
@@ -113,7 +71,6 @@
   <!-- Main content -->
   <main class="content">
     {% if current_user.is_authenticated %}
-      <!-- Top-right green pill logout -->
       <div class="top-right-actions">
         <a class="btn-logout" href="{{ url_for('logout') }}">Logout</a>
       </div>
