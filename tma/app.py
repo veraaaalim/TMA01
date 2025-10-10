@@ -1,11 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for
-from books import all_books
+from flask import Flask, render_template, redirect, url_for
+from books import all_books  
 
 app = Flask(__name__)
 
-CATEGORIES = ["All", "Children", "Teens", "Adult"]
-
-# Helper: show only first and last paragraphs
+# Helper: keep only first and last paragraph of description
 def first_last(paras):
     parts = [p.strip() for p in paras if p and p.strip()]
     if not parts:
@@ -18,13 +16,9 @@ def home():
 
 @app.route("/titles")
 def titles_page():
-    selected = request.args.get("category", "All")
     books_sorted = sorted(all_books, key=lambda b: b["title"].lower())
 
-    if selected != "All":
-        books_sorted = [b for b in books_sorted if b["category"] == selected]
-
-    # Prepare simplified data for template
+    # prepare data for display
     cards = [{
         "title": b["title"],
         "authors": ", ".join(b["authors"]),
@@ -34,13 +28,7 @@ def titles_page():
         "short_desc": first_last(b["description"])
     } for b in books_sorted]
 
-    return render_template(
-        "titles.html",
-        total=len(cards),
-        cards=cards,
-        categories=CATEGORIES,
-        selected=selected
-    )
+    return render_template("titles.html", cards=cards, total=len(cards))
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,21 +1,18 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>SG Library</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="brand">SG Library</div>
-    <nav class="nav">
-      <a class="nav-link active" href="{{ url_for('titles_page') }}">📚 Book Titles</a>
-    </nav>
+    <div class="brand">SG LIBRARY</div>
+    <a href="{{ url_for('titles_page') }}" class="nav-link active">Book Titles</a>
   </aside>
 
-  <!-- Main Content -->
+  <!-- Main content -->
   <main class="content">
     {% block content %}{% endblock %}
   </main>

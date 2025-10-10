@@ -1,26 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
 
-  <!-- Smaller green header -->
+  <!-- Green Header -->
   <header class="page-header">
     <h1>BOOK TITLES</h1>
   </header>
 
-  <!-- Category filter + total count -->
+  <!-- Toolbar: Category dropdown, Search box, Count -->
   <section class="toolbar">
     <div class="count">
-      <div>Number of titles:</div>
-      <div class="count-num">{{ total }}</div>
+      <div>Number of titles: {{ total }}</div>
     </div>
 
-    <form method="get" class="filter">
+    <form class="filter" method="get">
       <label for="category">Category</label>
       <select id="category" name="category">
-        {% for c in categories %}
-          <option value="{{ c }}" {{ 'selected' if c == selected else '' }}>{{ c }}</option>
-        {% endfor %}
+        <option>All</option>
+        <option>Children</option>
+        <option>Teens</option>
+        <option>Adult</option>
       </select>
-      <button class="btn btn-search" type="submit">Search</button>
+
+      <button type="submit" class="btn btn-search">Search</button>
     </form>
   </section>
 
@@ -42,7 +43,7 @@
           <p class="desc">{{ b.short_desc | replace('\n', '<br><br>') | safe }}</p>
 
           <div class="actions">
-            <a class="btn btn-details" href="#">More details</a>
+            <a class="btn-details" href="#">More details</a>
           </div>
         </div>
       </article>
