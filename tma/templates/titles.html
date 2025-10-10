@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 
-  <!-- Green title bar -->
+  <!-- Smaller green header -->
   <header class="page-header">
     <h1>BOOK TITLES</h1>
   </header>
 
-  <!-- Count + Category + Search -->
+  <!-- Category filter + total count -->
   <section class="toolbar">
     <div class="count">
       <div>Number of titles:</div>
@@ -24,11 +24,12 @@
     </form>
   </section>
 
-  <!-- Cards -->
+  <!-- Book Cards -->
   <section class="cards">
     {% for b in cards %}
       <article class="card">
         <img class="cover" src="{{ b.img }}" alt="{{ b.title }} cover">
+
         <div class="card-body">
           <h2 class="title">{{ b.title }}</h2>
           <div class="byline">By {{ b.authors }}</div>
@@ -38,11 +39,10 @@
             Pages: {{ b.pages }}
           </div>
 
-          <!-- FIX: display first + last paragraphs properly -->
           <p class="desc">{{ b.short_desc | replace('\n', '<br><br>') | safe }}</p>
 
           <div class="actions">
-            <a class="btn btn-details" href="{{ url_for('book_details', title=b.title) }}">More details</a>
+            <a class="btn btn-details" href="#">More details</a>
           </div>
         </div>
       </article>

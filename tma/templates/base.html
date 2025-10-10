@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <title>SG Library</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- make sure this path matches /static/style.css -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -14,10 +13,9 @@
     <nav class="nav">
       <a class="nav-link active" href="{{ url_for('titles_page') }}">📚 Book Titles</a>
     </nav>
-    <div class="sidebar-photo" aria-hidden="true"></div>
   </aside>
 
-  <!-- Main -->
+  <!-- Main Content -->
   <main class="content">
     {% block content %}{% endblock %}
   </main>
