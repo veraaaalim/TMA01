@@ -1,122 +1,260 @@
 /* ====== tokens ====== */
-:root{
-    --sidebar-w: 220px;
-    --green-100:#e9f5ec;
-    --green-200:#dfeee5;
-    --green-300:#cfe9d6;
-    --green-700:#4a9e62;
-    --ink:#2e3a3b;
-    --muted:#6c7a7a;
-    --bg:#f4f6f5;
-    --card:#ffffff;
-    --shadow:0 1px 3px rgba(0,0,0,.18);
-  }
-  
-  /* reset-ish */
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    color:var(--ink);
-    background:var(--bg);
-    display:flex;
-  }
-  
-  /* ====== sidebar ====== */
-  .sidebar {
-    width: var(--sidebar-w);
-    position: fixed;               /* lock sidebar in place */
-    top: 0;
-    left: 0;
-    height: 100vh;                 /* full height of viewport */
-  
-    background: linear-gradient(rgba(70, 64, 156, 0.35), rgba(0, 0, 0, 0.7)),
-                url("https://library.suss.edu.sg/wp-content/uploads/2023/11/Study-Space_High-table-2-cropped.png");
-    background-size: cover;        /* fill sidebar completely */
-    background-position: top center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;  /* keep image fixed on scroll */
-  
-    color: #fff;
-    box-shadow: 5px 7px 25px #9998;
-    display: flex;
-    flex-direction: column;
-    z-index: 10;                   /* stay above main content */
-  }
-  
-  
-  
-  .brand{padding:16px 18px; font-weight:700; letter-spacing:.3px}
-  .nav{padding:8px}
-  .nav-link{
-    display:block; color:#fff; text-decoration:none;
-    padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.12);
-  }
-  .nav-link:hover{background:rgba(255,255,255,.18)}
-  .nav-link.active{background:rgba(255,255,255,.2)}
-  .sidebar-photo{flex:1}
-  
-  /* ====== main ====== */
-  .content {
-    margin-left: var(--sidebar-w); /* prevent overlap */
-    padding: 18px 22px;
-    max-width: 1080px;
-  }
-  
-  /* top green bars */
-  .page-header{
-    background:var(--green-200);
-    border:1px solid var(--green-300);
-    border-bottom:0;
-    padding:10px 14px;
-    border-radius:6px 6px 0 0;
-    box-shadow:var(--shadow);
-  }
-  .page-header h1{margin:0; font-size:22px; letter-spacing:.6px}
-  
-  .toolbar{
-    display:flex; align-items:center; justify-content:space-between;
-    background:var(--green-100);
-    border:1px solid var(--green-300);
-    border-top:0;
-    padding:10px 14px;
-    border-radius:0 0 6px 6px;
-    box-shadow:var(--shadow);
-    margin-bottom:12px;
-  }
-  .count{display:flex; gap:8px; align-items:flex-end}
-  .count-num{font-weight:700}
-  .filter{display:flex; align-items:center; gap:8px}
-  .filter label{font-size:14px; color:#394646}
-  select{padding:6px 8px; border:1px solid #cfdad1; border-radius:4px; background:#fff}
-  .btn{border:0; border-radius:4px; padding:6px 10px; cursor:pointer}
-  .btn-search{background:#e7ecea}
-  .btn-details{background:var(--green-700); color:#fff}
-  
-  /* ====== cards ====== */
-  .cards{display:flex; flex-direction:column; gap:14px}
-  .card{
-    display:flex; gap:16px; background:var(--card);
-    border-radius:6px; padding:14px; box-shadow:var(--shadow);
-  }
-  .cover {
-    width:120px;
-    height:auto;        /* let height scale naturally */
-    object-fit:contain; /* shrink-to-fit inside box */
-    border-radius:4px;
-  }
-  
-  .card-body{flex:1}
-  .title{margin:0; font-size:18px}
-  .byline{margin:6px 0; color:var(--muted)}
-  .meta{font-size:13px; color:#61706b}
-  .desc{margin:10px 0; white-space:pre-line; line-height:1.45}
-  .actions{display:flex; justify-content:flex-end}
-  
-  /* ====== details ====== */
-  .detail-wrap{display:flex; gap:18px; background:#fff; padding:16px; border-radius:6px; box-shadow:var(--shadow)}
-  .detail-cover{width:160px; height:220px; object-fit:cover; border-radius:6px}
-  .detail-info{flex:1}
-  .desc.long p{margin:10px 0; line-height:1.5}
-  
+:root {
+  --sidebar-w: 220px;
+  --green-100: #e9f5ec;
+  --green-200: #dfeee5;
+  --green-300: #cfe9d6;
+  --green-700: #4a9e62;
+  --ink: #2e3a3b;
+  --muted: #6c7a7a;
+  --bg: #f4f6f5;
+  --card: #ffffff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== Reset ===== */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  display: flex;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: var(--sidebar-w);
+  position: fixed;
+  top: 0; left: 0; height: 100vh;
+  background: linear-gradient(rgba(70, 64, 156, 0.35), rgba(0, 0, 0, 0.7)),
+              url("https://library.suss.edu.sg/wp-content/uploads/2023/11/Study-Space_High-table-2-cropped.png");
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: #fff;
+  box-shadow: 5px 7px 25px #9998;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 10;
+}
+
+/* ===== Brand ===== */
+.brand {
+  padding: 20px 0 10px;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: .3px;
+  width: 100%;
+  text-align: center;
+}
+
+.brand::after {
+  content: "";
+  display: block;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.6);
+  margin: 8px 12px 0;
+  border-radius: 1px;
+}
+
+/* ===== Nav links ===== */
+.nav {
+  padding: 12px 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nav-link {
+  background: transparent;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 15px;
+  padding: 8px 10px;
+  transition: background 0.2s ease, opacity 0.2s ease;
+  width: 100%;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.nav-link.active {
+  background: none;
+  font-weight: 600;
+  opacity: 1;
+  position: relative;
+}
+
+/* Left green bar for active item */
+.nav-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--green-700);
+  border-radius: 2px;
+}
+
+/* Sidebar icons */
+.nav-link i,
+.nav-link img {
+  width: 18px;
+  height: 18px;
+  opacity: 0.9;
+  filter: brightness(0) invert(1);
+}
+
+.sidebar-photo { flex: 1; }
+
+/* ===== Main ===== */
+.content {
+  margin-left: var(--sidebar-w);
+  padding: 18px 22px;
+  max-width: 1080px;
+}
+
+/* ===== Top green header + toolbar ===== */
+.page-header {
+  background: var(--green-200);
+  border: 1px solid var(--green-300);
+  border-bottom: 0;
+  padding: 10px 14px;
+  border-radius: 6px 6px 0 0;
+  box-shadow: var(--shadow);
+}
+.page-header h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: .6px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--green-100);
+  border: 1px solid var(--green-300);
+  border-top: 0;
+  padding: 10px 14px;
+  border-radius: 0 0 6px 6px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+
+.count { display: flex; gap: 8px; align-items: flex-end; }
+.count-num { font-weight: 700; }
+.filter { display: flex; align-items: center; gap: 8px; }
+.filter label { font-size: 14px; color: #394646; }
+
+select {
+  padding: 6px 8px;
+  border: 1px solid #cfdad1;
+  border-radius: 4px;
+  background: #fff;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  border: 0;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-search {
+  background: var(--green-700);
+  color: #fff;
+  border: none;
+  transition: background 0.2s ease;
+}
+.btn-search:hover { background: #5ea770; }
+
+.btn-details {
+  background: var(--green-700);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* ===== Cards ===== */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card {
+  display: flex;
+  gap: 16px;
+  background: var(--card);
+  border-radius: 6px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.cover {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.card-body { flex: 1; }
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.byline {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.meta {
+  font-size: 13px;
+  color: #61706b;
+  margin-top: 8px;
+}
+
+.actions { display: flex; justify-content: flex-end; }
+
+/* ===== Details page ===== */
+.detail-wrap {
+  display: flex;
+  gap: 18px;
+  background: #fff;
+  padding: 16px;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.detail-cover {
+  width: 160px;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.detail-info { flex: 1; }
+.desc.long p { margin: 10px 0; line-height: 1.5; }

@@ -34,7 +34,7 @@ def titles_page():
     } for b in books_sorted]
 
     return render_template(
-        "layout.html",
+        "titles.html",
         total=len(cards),
         cards=cards,
         categories=CATEGORIES,
