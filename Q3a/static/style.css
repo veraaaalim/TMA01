@@ -31,15 +31,11 @@ body{
 .logout-btn::before{
   content:""; display:block; width:20px; height:20px;
   background:center/contain no-repeat;
-  /* exit icon (white) */
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M10 17l1.41-1.41L8.83 13H21v-2H8.83l2.58-2.59L10 7l-5 5 5 5zM4 5h6V3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6v-2H4V5z'/%3E%3C/svg%3E");
 }
 .logout-btn:hover{filter:brightness(1.05)}
 .logout-btn:active{transform:translateY(1px)}
-/* When mobile hamburger shows at top-right, shift logout left a bit */
-@media (max-width:991.98px){
-  .logout-btn{ right:60px }
-}
+@media (max-width:991.98px){ .logout-btn{ right:60px } }
 
 /* ========== Hamburger (mobile) ========== */
 .hamburger{display:none;position:fixed;top:10px;right:12px;z-index:110;
@@ -82,7 +78,7 @@ body{
 .content{
   margin-left:var(--sidebar-w);
   padding:18px 22px;
-  max-width:none;                  /* allow full-width pages */
+  max-width:none;
   width:calc(100% - var(--sidebar-w));
   flex:1;
   transition:margin-top .35s ease;
@@ -111,30 +107,9 @@ body{
 .card{display:flex;gap:16px;background:var(--card);border-radius:6px;padding:14px;box-shadow:var(--shadow)}
 .cover{width:120px;height:auto;object-fit:contain;border-radius:4px;flex-shrink:0}
 .card-body{flex:1}
-.title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ink);
-  line-height: 1.2;
-}
-
-.byline {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--muted);
-  line-height: 1.2;
-}
-
-.meta {
-  font-size: 14px;     
-  color: var(--ink);     
-  line-height: 1.45;     
-  margin-top: 8px;
-}
-
-.actions { display: flex; justify-content: flex-end; }
+.title{margin:0;font-size:16px;font-weight:600;color:var(--ink);line-height:1.2}
+.byline{margin:0 0 10px 0;font-size:16px;font-weight:500;color:var(--muted);line-height:1.2}
+.meta{font-size:14px;color:var(--ink);line-height:1.45;margin-top:8px}
 .actions{display:flex;justify-content:flex-end}
 .btn{border:0;border-radius:4px;padding:6px 10px;cursor:pointer}
 .btn-details{background:var(--green-700);color:#fff;text-decoration:none}
@@ -189,13 +164,36 @@ body{
 }
 .form-grid .full{grid-column:1 / -1}
 
-/* Authors row: input grows, checkbox stays min content */
-.authors-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}
+/* ===== Author rows (final) ===== */
+/* tighter rhythm for this form */
+.add-book-page .form-grid{ row-gap:8px; }
 
-/* Inline “Illustrator” checkbox */
-.checkbox-inline{display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-size:14px;color:var(--muted)}
+/* left-column labels for authors */
+.lb{ margin:6px 0 0; }
 
-/* Genre chips (optional helper) */
+/* right-column row: input grows, checkbox+text fits to content */
+.fld.fld-author{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) max-content;
+  align-items:center;
+  column-gap:8px;
+}
+.fld.fld-author input[type="text"]{
+  width:100%; height:34px; padding:6px 8px;
+}
+
+/* checkbox + “Illustrator” label inline (wins over generic label rule) */
+.form-card .chk-illus{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+  color:var(--muted);
+  margin:0;
+  flex-shrink:0;
+}
+
+/* ===== Extras ===== */
 .genre-chips{display:flex;flex-wrap:wrap;gap:8px}
 .genre-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #cfcfcf;border-radius:999px;background:#fff;cursor:pointer;user-select:none;font-size:14px}
 .genre-chip input[type="checkbox"]{appearance:none;width:14px;height:14px;border:1px solid #c3c3c3;border-radius:3px;position:relative}
@@ -248,5 +246,5 @@ body{
 
   /* New Book form responsive tweaks */
   .form-grid{grid-template-columns:1fr}
-  .authors-grid{grid-template-columns:1fr}
+  .fld.fld-author{ grid-template-columns:minmax(0,1fr) max-content; }
 }

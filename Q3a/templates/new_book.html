@@ -38,45 +38,16 @@
           <textarea id="description" name="description" class="full" placeholder="One paragraph per line"></textarea>
 
           <!-- Authors 1..5 -->
-          <label for="author1">Author 1:</label>
-          <div class="authors-grid">
-            <input id="author1" name="author1" type="text" placeholder="Name">
-            <label class="checkbox-inline">
-              <input type="checkbox" name="illus1"> Illustrator
+          {% for i in range(1,6) %}
+          <label for="author{{ i }}" class="lb">Author {{ i }}:</label>
+          <div class="fld fld-author">
+            <input id="author{{ i }}" name="author{{ i }}" type="text">
+            <label class="chk-illus">
+              <input type="checkbox" name="illus{{ i }}"> <span>Illustrator</span>
             </label>
           </div>
-
-          <label for="author2">Author 2:</label>
-          <div class="authors-grid">
-            <input id="author2" name="author2" type="text" placeholder="Name">
-            <label class="checkbox-inline">
-              <input type="checkbox" name="illus2"> Illustrator
-            </label>
-          </div>
-
-          <label for="author3">Author 3:</label>
-          <div class="authors-grid">
-            <input id="author3" name="author3" type="text" placeholder="Name">
-            <label class="checkbox-inline">
-              <input type="checkbox" name="illus3"> Illustrator
-            </label>
-          </div>
-
-          <label for="author4">Author 4:</label>
-          <div class="authors-grid">
-            <input id="author4" name="author4" type="text" placeholder="Name">
-            <label class="checkbox-inline">
-              <input type="checkbox" name="illus4"> Illustrator
-            </label>
-          </div>
-
-          <label for="author5">Author 5:</label>
-          <div class="authors-grid">
-            <input id="author5" name="author5" type="text" placeholder="Name">
-            <label class="checkbox-inline">
-              <input type="checkbox" name="illus5"> Illustrator
-            </label>
-          </div>
+        {% endfor %}
+        
 
           <label for="pages">Number of pages:</label>
           <input id="pages" name="pages" type="number" min="0" step="1" placeholder="e.g. 320">
