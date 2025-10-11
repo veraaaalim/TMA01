@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}My Loans • SG Library{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <h1>MY LOANS</h1>
+  </header>
+
+  {% if loans|length == 0 %}
+    <p>You have no loans.</p>
+  {% else %}
+    <section class="cards">
+      {% for L in loans %}
+        <article class="card">
+          {% if L.cover %}
+            <img class="cover" src="{{ L.cover }}" alt="">
+          {% endif %}
+          <div class="card-body">
+            <h3 class="title">{{ L.title }}</h3>
+            <div class="meta">
+              <span>Borrowed: {{ L.borrowDate }}</span>
+              {% if L.returnDate %}
+                <span>Returned: {{ L.returnDate }}</span>
+              {% else %}
+                <span>Status: On Loan</span>
+              {% endif %}
+              <span>Renewals: {{ L.renewCount }}</span>
+            </div>
+
+            <div class="card-actions">
+              {% if not L.returnDate %}
+                <a class="btn btn-loan push-right" href="{{ url_for('renew_loan', loan_id=L._id) }}">Renew</a>
+                <a class="btn btn-return" href="{{ url_for('return_loan', id=L._id) }}">Return</a>
+              {% else %}
+                <a class="btn btn-na push-right" role="button" aria-disabled="true" tabindex="-1">Returned</a>
+                <a class="btn btn-details" href="{{ url_for('delete_loan', loan_id=L._id) }}">Delete</a>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
+{% endblock %}

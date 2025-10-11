@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Book Titles • SG Library{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <h1>BOOK TITLES</h1>
+  </header>
+
+  <section class="topbar">
+    <div class="count">{{ total }} result{{ '' if total == 1 else 's' }}</div>
+    <form class="filter" method="get" action="{{ url_for('titles_page') }}">
+      <label for="cat">Category</label>
+      <select id="cat" name="category">
+        {% for c in categories %}
+          <option value="{{ c }}" {% if c == selected %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search books..." />
+      <button class="btn btn-search" type="submit">Search</button>
+    </form>
+  </section>
+
+  <section class="cards">
+    {% for c in cards %}
+      <article class="card">
+        <img class="cover" src="{{ c.img }}" alt="{{ c.title }} cover">
+        <div class="card-body">
+          <h3 class="title">{{ c.title }}</h3>
+          <p class="byline">{{ c.authors }}</p>
+
+          <div class="meta">
+            <span>Category: {{ c.category_line }}</span>
+            <span>Pages: {{ c.pages }}</span>
+            <span>Available: {{ c.available }} / {{ c.copies }}</span>
+          </div>
+
+          <p class="meta" style="white-space:pre-line">{{ c.short_desc }}</p>
+
+          <div class="card-actions">
+            {# Right-aligned group: More Details first, then the state buttons #}
+            <a class="btn btn-details push-right" href="{{ url_for('book_details', id=c._id) }}">
+              More Details
+            </a>
+          
+            {% if c.available > 0 %}
+              {% if current_user.is_authenticated %}
+                <a class="btn btn-loan" href="{{ url_for('make_loan', id=c._id) }}">Make a Loan</a>
+              {% else %}
+                <a class="btn btn-details" href="{{ url_for('login') }}">Login to Borrow</a>
+              {% endif %}
+            {% else %}
+              <span class="btn btn-na" role="button" aria-disabled="true" tabindex="-1">Not Available</span>
+            {% endif %}
+          
+            {% if c.copies and c.available < c.copies and current_user.is_authenticated %}
+              <a class="btn btn-return" href="{{ url_for('return_loan', id=c._id) }}">Return One</a>
+            {% endif %}
+          </div>          
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+{% endblock %}
