@@ -35,17 +35,18 @@
         {% endfor %}
       </div>
 
-      <div class="actions equal">
-        {% if avail > 0 %}
-          {# UI-only green button; does nothing #}
-          <button type="button" class="btn btn-loan" aria-label="Make a Loan (UI only)">
-            Make a Loan
-          </button>
-        {% endif %}
+      {# Buttons on the right; Back sits just left of Action #}
+      <div class="actions equal right-tight">
         <a class="btn btn-back"
            href="{{ url_for('titles_page', category=request.args.get('from','All'), q=request.args.get('q','')) }}">
-          Back to list
+          Back to Book Titles
         </a>
+
+        {% if avail > 0 %}
+          <a class="btn btn-loan" href="{{ url_for('make_loan', id=book._id) }}">Make a Loan</a>
+        {% else %}
+          <span class="btn btn-na" role="button" aria-disabled="true" tabindex="-1">Not Available</span>
+        {% endif %}
       </div>
     </div>
   </article>

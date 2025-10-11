@@ -3,6 +3,7 @@
   --sidebar-w: 220px;
   --green-100:#e9f5ec; --green-200:#dfeee5; --green-300:#cfe9d6;
   --green-600:#5ea770; --green-700:#4a9e62;
+  --red-600:#d9534f;  --red-700:#c43e3a;
   --ink:#2e3a3b; --muted:#6c7a7a;
   --bg:#f4f6f5; --card:#fff;
   --shadow:0 1px 3px rgba(0,0,0,.18);
@@ -58,7 +59,7 @@ body{
 .brand-desktop .brand-name{font-size:22px;font-weight:700;letter-spacing:.2px;text-shadow:0 1px 2px rgba(0,0,0,.25)}
 .brand-desktop .brand-rule{width:88%;height:1px;background:rgba(255,255,255,.7);margin:10px auto 0;border-radius:1px}
 
-/* Nav (NO logout here) */
+/* Nav */
 .nav{padding:14px 6px 0}
 .nav-link{
   display:flex;align-items:center;gap:12px;
@@ -114,35 +115,62 @@ body{
 .meta{font-size:14px;color:var(--ink);line-height:1.45;margin-top:8px}
 .meta span{display:block}
 
-/* Actions row & buttons */
-.actions.equal { display:flex; gap:12px; justify-content:flex-end; }
-.actions.equal .btn {
-  display:inline-flex;               
-  width: 150px !important;
-  padding: 12px 10px;
-  font-size: 15px;          
-  justify-content:center;
-  text-align:center;
+/* --- Card actions: More Details to extreme right --- */
+/* --- Card actions on Titles: buttons pinned to right --- */
+.card-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:10px;
+}
+.card-actions .btn{
+  padding:10px 16px;
+  border-radius:6px;
+  font-weight:600;
   white-space:nowrap;
+  display:inline-flex; align-items:center; justify-content:center;
 }
-@media (max-width: 520px){
-  .actions.equal .btn { width:auto !important; flex:1 1 0; }
-}
-
-/* Green primary buttons */
-.btn-details,
-.btn-loan,
-.btn-back,
-.btn-submit{
+.card-actions .push-right{ margin-left:auto; }   /* pushes this and following buttons to extreme right */
+.card-actions .btn-details{
   background:var(--green-700);
   color:#fff;
+  text-decoration:none;
 }
-.btn-details:hover,
-.btn-loan:hover,
-.btn-back:hover,
-.btn-submit:hover{ filter:brightness(.95) }
 
-.btn-back{ text-decoration:none; }
+
+/* ===== Actions row & buttons (equal, smaller; both on right with Back just left of Action) ===== */
+.actions.equal{
+  display:flex;
+  gap:12px;
+  justify-content:flex-end;       /* both buttons on the right */
+}
+.actions.equal .btn{
+  width:180px !important;         /* equal, smaller size */
+  padding:10px 16px;
+  font-size:16px;
+  border-radius:6px;
+  white-space:nowrap;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+
+/* Green buttons */
+.btn-details,.btn-loan,.btn-back,.btn-submit{
+  background:var(--green-700);
+  color:#fff;
+  text-decoration:none;
+  font-weight:600;
+}
+.btn-details:hover,.btn-loan:hover,.btn-back:hover,.btn-submit:hover{ filter:brightness(.95) }
+
+/* Red "Not Available" button */
+.btn-na{
+  background:var(--red-600);
+  color:#fff;
+  cursor:not-allowed;
+  text-decoration:none;
+  font-weight:600;
+}
+.btn-na:hover{ background:var(--red-700); filter:none }
 
 /* ===== Book details card ===== */
 .details-card{
@@ -159,25 +187,20 @@ body{
 .flash.success{background:#e9f7ef;border-color:#bde5c8}
 .flash.info{background:#eef5ff;border-color:#c7dafc}
 
-/* ===== Generic forms ===== */
+/* ===== Forms ===== */
 .form-container{display:block;padding:16px 0}
 .form-card{width:400px;max-width:95%;background:#fff;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.2);overflow:hidden}
-.form-card .form-title{
-  margin:0;padding:12px 16px;font-size:18px;font-weight:600;color:#000;
-  background:#f5f5f5;border-bottom:1px solid #ddd
-}
 .form-card form{padding:16px;background:#fff}
 .form-card label{display:block;margin:10px 0 6px;font-weight:500}
 .form-card input{width:100%;padding:10px;border:1px solid #cfcfcf;border-radius:4px;outline:none;margin-bottom:12px}
 .form-card input:focus{border-color:var(--green-600);box-shadow:0 0 0 2px rgba(94,167,112,.15)}
-.form-actions{text-align:right}
+.btn-submit{background:var(--green-700);color:#fff;border:0;border-radius:4px;padding:8px 16px;cursor:pointer;font-weight:600}
 .btn-submit:hover{filter:brightness(.95)}
 
 /* ===== New Book form — WIDE layout ===== */
 .add-book-page .content{max-width:none;width:calc(100% - var(--sidebar-w))}
 .form-card.form-wide{width:100%;max-width:100%}
-.form-card textarea,
-.form-card select{
+.form-card textarea,.form-card select{
   width:100%;padding:10px;border:1px solid #cfcfcf;border-radius:4px;outline:none;margin-bottom:12px;
   resize:vertical;min-height:110px
 }
@@ -192,7 +215,7 @@ body{
 }
 .form-grid .full{grid-column:1 / -1}
 
-/* ===== Author rows (final) ===== */
+/* Author rows */
 .add-book-page .form-grid{ row-gap:8px; }
 .lb{ margin:6px 0 0; }
 .fld.fld-author{
@@ -201,17 +224,9 @@ body{
   align-items:center;
   column-gap:8px;
 }
-.fld.fld-author input[type="text"]{
-  width:100%; height:34px; padding:6px 8px;
-}
+.fld.fld-author input[type="text"]{ width:100%; height:34px; padding:6px 8px; }
 .form-card .chk-illus{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  white-space:nowrap;
-  color:var(--muted);
-  margin:0;
-  flex-shrink:0;
+  display:inline-flex; align-items:center; gap:6px; white-space:nowrap; color:var(--muted); margin:0; flex-shrink:0;
 }
 
 /* ===== Extras ===== */
@@ -220,12 +235,6 @@ body{
 .genre-chip input[type="checkbox"]{appearance:none;width:14px;height:14px;border:1px solid #c3c3c3;border-radius:3px;position:relative}
 .genre-chip input[type="checkbox"]:checked{background:var(--green-700);border-color:var(--green-700)}
 .genre-chip input[type="checkbox"]:checked::after{content:"";position:absolute;left:3px;top:1px;width:6px;height:10px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
-
-.field-hint{font-size:13px;color:var(--muted);margin-top:-6px;margin-bottom:12px}
-.field-error{font-size:13px;color:#b40000;margin-top:-6px;margin-bottom:12px}
-
-.btn-secondary{background:#fff;color:var(--ink);border:1px solid #cfcfcf;border-radius:4px;padding:8px 16px;cursor:pointer;margin-right:8px}
-.btn-secondary:hover{background:#f7f7f7}
 
 /* ========== Responsive ========== */
 @media (min-width:768px){.hamburger{display:none}}
@@ -265,7 +274,6 @@ body{
   .details-card .details-body{grid-column:1 / -1;margin-top:.6rem}
   .details-card .cover-lg{width:100%;max-width:none;margin:0 0 .9rem 0;border-radius:12px}
 
-  /* New Book form responsive tweaks */
   .form-grid{grid-template-columns:1fr}
   .fld.fld-author{ grid-template-columns:minmax(0,1fr) max-content; }
 }

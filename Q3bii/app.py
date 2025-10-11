@@ -37,7 +37,6 @@ def seed_books_if_empty(coll, all_books):
         docs = []
         for b in all_books:
             copies = int(b.get("copies", 0))
-            # default: make all copies available unless source explicitly says otherwise
             available = b.get("available", copies)
             try:
                 available = int(available)
@@ -72,7 +71,7 @@ try:
 except Exception as e:
     print(f"[Seed WARNING] {e}", file=sys.stderr)
 
-# ---- Seed default users (required by the question) ----
+# ---- Seed default users ----
 def seed_users_if_empty():
     if users_coll.estimated_document_count() == 0:
         users_coll.insert_many([
@@ -239,7 +238,6 @@ def make_loan(id):
         flash("No copies available to loan.", "error")
         return redirect(url_for("titles_page"))
 
-    # TODO: replace with real loan creation & decrement logic/collection
     books_coll.update_one({"_id": obj_id}, {"$inc": {"available": -1}})
     flash("Loan created (stub).", "success")
     return redirect(url_for("book_details", id=str(obj_id)))
@@ -307,14 +305,12 @@ def new_book():
         flash("Only admin users can add new books.", "error")
         return redirect(url_for("titles_page"))
     if request.method == "POST":
-        # ---- read fields ----
         title = request.form.get("title", "").strip()
         category = request.form.get("category", "").strip()
         url_ = request.form.get("url", "").strip()
         description = request.form.get("description", "").splitlines()
         genres = request.form.getlist("genres")
 
-        # authors (up to 5) + illustrator flags
         a_names, illustrators = [], []
         for i in range(1, 6):
             name = request.form.get(f"author{i}", "").strip()
@@ -323,7 +319,6 @@ def new_book():
                 if request.form.get(f"illus{i}") == "on":
                     illustrators.append(name)
 
-        # numeric
         def as_int(v, default=0):
             try:
                 return int(v)
@@ -332,7 +327,6 @@ def new_book():
         pages = as_int(request.form.get("pages", "0"))
         copies = as_int(request.form.get("copies", "1"))
 
-        # minimal validation
         if not title:
             flash("Title is required.", "error")
             return redirect(url_for("new_book"))
@@ -343,14 +337,14 @@ def new_book():
         doc = {
             "title": title,
             "authors": a_names,
-            "illustrators": illustrators,   # optional field
+            "illustrators": illustrators,
             "category": category,
             "genres": genres,
             "url": url_,
             "description": description,
             "pages": pages,
             "copies": copies,
-            "available": copies  # default: all copies available
+            "available": copies
         }
         try:
             books_coll.insert_one(doc)
@@ -358,10 +352,8 @@ def new_book():
         except Exception as e:
             flash(f"Failed to add book: {e}", "error")
 
-        # stay on same page
         return redirect(url_for("new_book"))
 
-    # GET
     return render_template(
         "new_book.html",
         categories=[c for c in CATEGORIES if c != "All"],
