@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Book Titles • SG Library{% endblock %}
+
+{% block content %}
+  <header class="page-header desktop-title">
+    <h1>BOOK TITLES</h1>
+  </header>
+
+  <section class="topbar">
+    <div class="count">Number of titles: {{ total }}</div>
+
+    <form action="{{ url_for('titles_page') }}" method="get" class="filter">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        {% for c in categories %}
+          <option value="{{ c }}" {{ 'selected' if c == selected else '' }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+
+      <input type="text" name="q" placeholder="Search title / author..."
+             value="{{ q or '' }}" aria-label="Search books">
+      <button class="btn btn-search" type="submit">Search</button>
+    </form>
+  </section>
+
+  <section class="cards">
+    {% for c in cards %}
+      <article class="card">
+        <img class="cover" src="{{ c.img }}" alt="{{ c.title }} cover">
+        <div class="card-body">
+          <h3 class="title">{{ c.title }}</h3>
+          <div class="byline">By {{ c.authors }}</div>
+
+          <div class="meta">
+            <span>Category: {{ c.category_line }}</span>
+            <span>Pages: {{ c.pages }}</span>
+          </div>
+
+          {# First & last description paragraphs #}
+          {% set paras = (c.short_desc or '').split('\n\n') %}
+          {% if paras and paras[0] %}<p class="desc">{{ paras[0] }}</p>{% endif %}
+          {% if paras|length > 1 and paras[-1] %}<p class="desc">{{ paras[-1] }}</p>{% endif %}
+
+          <div class="actions equal">
+            {% if (c.available|int) > 0 %}
+              {# UI-only green button; does nothing #}
+              <button type="button" class="btn btn-loan" aria-label="Make a Loan (UI only)">
+                Make a Loan
+              </button>
+            {% endif %}
+            <a class="btn btn-details" href="{{ url_for('book_details', id=c._id) }}">
+              More details
+            </a>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+{% endblock %}
