@@ -35,19 +35,20 @@
     {% if cards and cards|length > 0 %}
       {% for b in cards %}
         <article class="card">
-          <!-- Book cover links to details -->
           <a href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
             <img class="cover" src="{{ b.img }}" alt="{{ b.title }} cover">
           </a>
 
           <div class="card-body">
-            <!-- Compact: title + author in one line -->
-            <h2 class="title-line">
-              <a href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
+            <h2 class="title">
+              <a class="title-link"
+                 href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
                 {{ b.title }}
               </a>
-              <span class="by-author">by {{ b.authors }}</span>
             </h2>
+
+            <!-- Authors list rendered like the screenshot -->
+            <div class="byline">By {{ b.authors if b.authors is string else ", ".join(b.authors) }}</div>
 
             <div class="meta">
               Category: {{ b.category_line }}<br>
