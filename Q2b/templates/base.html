@@ -27,7 +27,7 @@
 
       {% if current_user.is_authenticated %}
         <div class="nav-sep"></div>
-        <div class="welcome">Hello, {{ current_user.name }}</div>
+        <!-- Greeting removed -->
         <a class="nav-link" href="{{ url_for('logout') }}">
           <svg aria-hidden="true" viewBox="0 0 24 24" class="nav-ic">
             <path d="M10 6h-4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
@@ -123,6 +123,7 @@
         setOpen(!document.body.classList.contains('menu-open'));
       });
 
+      // Close panel on nav click (mobile UX)
       sidebar.addEventListener('click', (e) => {
         if (e.target.matches('a.nav-link, a.banner-link')) setOpen(false);
       });
