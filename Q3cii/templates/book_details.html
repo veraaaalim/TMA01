@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Book Details • SG Library{% endblock %}
+
+{% block content %}
+  <header class="page-header desktop-title">
+    <h1>BOOK DETAILS</h1>
+  </header>
+
+  {% set avail =
+       (book.available if book.available is defined else
+        book.get('available', book.get('copies_available', book.get('copies', 0)))) | int %}
+  {% set copies = (book.copies if book.copies is defined else book.get('copies', 0)) | int %}
+
+  <article class="details-card">
+    <img class="cover-lg" src="{{ book.url }}" alt="{{ book.title }} cover">
+
+    <div class="details-body">
+      <h2 class="title">{{ book.title }}</h2>
+
+      <div class="byline">
+        By {{ ", ".join(book.authors) }}
+        {% if book.get('illustrator') %}, {{ book.illustrator }} (Illustrator){% endif %}
+      </div>
+
+      <div class="meta">
+        Category: {{ book.category }}, {{ ", ".join(book.genres) }}<br>
+        Pages: {{ book.pages }}<br>
+        {% if book.get('copies') %}Copies: {{ copies }}{% endif %}
+        | Available: {{ avail }}
+      </div>
+
+      <div class="desc">
+        {% for para in book.description %}
+          {% if para and para.strip() %}<p>{{ para }}</p>{% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="actions equal right-tight">
+        <a class="btn btn-back"
+           href="{{ url_for('titles_page', category=request.args.get('from','All'), q=request.args.get('q','')) }}">
+          Back to Book Titles
+        </a>
+
+        {% if avail > 0 %}
+          <a class="btn btn-loan" href="{{ url_for('make_loan', id=book._id) }}">Make a Loan</a>
+        {% else %}
+          <span class="btn btn-na" role="button" aria-disabled="true" tabindex="-1">Not Available</span>
+        {% endif %}
+
+        {% if copies > 0 and avail < copies and current_user.is_authenticated %}
+          <a class="btn btn-return" href="{{ url_for('return_loan', id=book._id) }}">Return One</a>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+{% endblock %}
+
+{% block banner_title %}
+  <div class="page-header banner-title" style="margin:0">
+    <h1>BOOK DETAILS</h1>
+  </div>
+{% endblock %}
