@@ -1,12 +1,11 @@
-# app.py
 from flask import Flask, render_template, request, abort, url_for, redirect
 from pymongo import MongoClient, errors
 from bson import ObjectId
 import os, sys
 
 # --- local modules ---
-from books import all_books                  # your provided seed data (list[dict])
-from models.book import Book                 # the dataclass with seed_if_empty()
+from books import all_books          # seed data (list[dict])
+from models.book import Book         # Book dataclass with seed_if_empty()
 
 # ---------------- Flask app ----------------
 app = Flask(__name__)
@@ -41,45 +40,26 @@ def first_last(paras):
 # ---------------- Routes --------------------
 @app.route("/")
 def home():
-    # open on Book Titles
+    # Open on Book Titles page
     return redirect(url_for("titles_page"))
 
 @app.route("/titles")
 def titles_page():
     selected = request.args.get("category", "All")
-    q = (request.args.get("q") or "").strip()
 
-    # base filter (category)
+    # base filter (category only)
     base_filter = {}
     if selected and selected != "All":
         base_filter["category"] = selected
 
-    # projection
+    # projection (fields to return)
     fields = {
         "title": 1, "authors": 1, "url": 1,
         "category": 1, "genres": 1, "pages": 1, "description": 1
     }
 
-    # search flow: text index → regex fallback → plain list
-    docs = []
-    if q:
-        text_filter = dict(base_filter, **{"$text": {"$search": q}})
-        docs = list(books_coll.find(text_filter, fields).sort("title", 1))
-
-        if not docs:
-            rx = {"$regex": q, "$options": "i"}
-            rx_filter = {
-                **base_filter,
-                "$or": [
-                    {"title": rx},
-                    {"authors": rx},
-                    {"genres": rx},
-                    {"description": rx},
-                ],
-            }
-            docs = list(books_coll.find(rx_filter, fields).sort("title", 1))
-    if not docs:
-        docs = list(books_coll.find(base_filter, fields).sort("title", 1))
+    # fetch from MongoDB (no free-text search)
+    docs = list(books_coll.find(base_filter, fields).sort("title", 1))
 
     # transform for template cards
     cards = [{
@@ -98,13 +78,12 @@ def titles_page():
         cards=cards,
         categories=CATEGORIES,
         selected=selected,
-        q=q,
     )
 
 @app.route("/book/<key>")
 def book_details(key):
     """
-    Backward-compatible: accepts either a Mongo _id (ObjectId string)
+    Accepts either a Mongo _id (ObjectId string)
     or a book title (exact match).
     """
     doc = None
@@ -128,4 +107,5 @@ def book_details(key):
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8080"))
+    print(f"Server binding: http://{host}:{port}")
     app.run(host=host, port=port, debug=True)

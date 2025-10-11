@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}SG Library{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- System fonts to match the figures (no external imports) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <!-- Sidebar (desktop fixed • mobile = collapsible “top panel”) -->
+  <aside class="sidebar" id="sidebar" aria-label="Primary" aria-hidden="true">
+    <!-- Desktop brand/header -->
+    <div class="brand-desktop">
+      <div class="brand-name">SG Library</div>
+      <div class="brand-rule"></div>
+    </div>
+
+    <!-- Desktop nav -->
+    <nav class="nav" aria-label="Main">
+      <a class="nav-link {% if request.path.startswith('/titles') %}active{% endif %}"
+         href="{{ url_for('titles_page') }}">📚 Book Titles</a>
+    </nav>
+
+    <!-- Decorative photo area (desktop) -->
+    <div class="sidebar-photo" aria-hidden="true"></div>
+
+    <!-- Mobile/Tablet slide-down banner -->
+    <div class="sidebar-banner">
+      <div class="brand-text">SG Library</div>
+
+      <!-- Mobile/Tablet nav inside banner -->
+      <nav class="banner-nav" aria-label="Banner">
+        <a class="banner-link {% if request.path.startswith('/titles') %}active{% endif %}"
+           href="{{ url_for('titles_page') }}">📚 Book Titles</a>
+      </nav>
+
+      <!-- Page-supplied banner content -->
+      {% block banner_title %}{% endblock %}
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="content">
+    {% block main_header %}{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Hamburger (only visible on small screens) -->
+  <button id="menuToggle"
+          class="hamburger"
+          aria-label="Toggle menu"
+          aria-controls="sidebar"
+          aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('menuToggle');
+      const sidebar = document.getElementById('sidebar');
+
+      function setOpen(open) {
+        document.body.classList.toggle('menu-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+        sidebar.setAttribute('aria-hidden', String(!open));
+      }
+
+      btn.addEventListener('click', () => {
+        setOpen(!document.body.classList.contains('menu-open'));
+      });
+
+      // Close panel on nav click (mobile UX)
+      sidebar.addEventListener('click', (e) => {
+        if (e.target.matches('a.nav-link, a.banner-link')) setOpen(false);
+      });
+    })();
+  </script>
+</body>
+</html>
