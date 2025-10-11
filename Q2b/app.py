@@ -1,65 +1,34 @@
-from flask import (
-    Flask, render_template, request, abort,
-    url_for, redirect
-)
+from flask import Flask, render_template, request, abort, url_for, redirect
 from pymongo import MongoClient, errors
 from bson import ObjectId
 import os, sys
 
-# -------- Flask app --------
+# --- local modules ---
+from books import all_books          # seed data (list[dict])
+from models.book import Book         # Book dataclass with seed_if_empty()
+
+# ---------------- Flask app ----------------
 app = Flask(__name__)
 
-# -------- MongoDB connection --------
+# --------------- MongoDB -------------------
 MONGO_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017")
 client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
-
 try:
     client.admin.command("ping")
-    print(f"[MongoDB] Connected to {MONGO_URI}")
+    print(f"[MongoDB] Connected → {MONGO_URI}")
 except errors.ServerSelectionTimeoutError as e:
     print(f"[Mongo ERROR] Cannot connect → {e}", file=sys.stderr)
 
 db = client["sg_library"]
 books_coll = db["books"]
 
-# ---- Seed Books (only once if empty) ----
-from books import all_books  # source data for seeding
-
-def seed_books_if_empty(coll, all_books):
-    """Seeds the books collection if it is empty."""
-    if coll.estimated_document_count() == 0:
-        docs = []
-        for b in all_books:
-            docs.append({
-                "title": b.get("title", "").strip(),
-                "authors": b.get("authors", []),
-                "category": b.get("category", "").strip(),
-                "genres": b.get("genres", []),
-                "url": b.get("url", "").strip(),
-                "description": b.get("description", []),
-                "pages": int(b.get("pages", 0)) if b.get("pages") else 0,
-                "copies": int(b.get("copies", 0)) if b.get("copies") else 0,
-                "available": int(b.get("available", 0))
-            })
-
-        if docs:
-            coll.insert_many(docs)
-            coll.create_index("title")
-            coll.create_index("category")
-            coll.create_index([
-                ("title", "text"),
-                ("authors", "text"),
-                ("genres", "text"),
-                ("description", "text")
-            ])
-            print(f"[MongoDB] ✅ Seeded {len(docs)} books and created indexes")
-
+# Seed once if empty (and create indexes)
 try:
-    seed_books_if_empty(books_coll, all_books)
+    Book.seed_if_empty(books_coll, all_books)
 except Exception as e:
     print(f"[Seed WARNING] {e}", file=sys.stderr)
 
-# -------- Constants/helpers --------
+# ------------- Helpers / constants ----------
 CATEGORIES = ["All", "Children", "Teens", "Adult"]
 
 def first_last(paras):
@@ -68,32 +37,35 @@ def first_last(paras):
         return ""
     return parts[0] if len(parts) == 1 else f"{parts[0]}\n\n{parts[-1]}"
 
-# -------- Routes --------
+# ---------------- Routes --------------------
 @app.route("/")
 def home():
+    # Open on Book Titles page
     return redirect(url_for("titles_page"))
 
 @app.route("/titles")
 def titles_page():
     selected = request.args.get("category", "All")
-    q = request.args.get("q", "").strip()
+    q = (request.args.get("q") or "").strip()
 
+    # base filter (category only)
     base_filter = {}
     if selected and selected != "All":
         base_filter["category"] = selected
 
+    # projection (fields to return)
     fields = {
         "title": 1, "authors": 1, "url": 1,
         "category": 1, "genres": 1, "pages": 1, "description": 1
     }
 
+    # search flow: text index → regex fallback → plain list
+    docs = []
     if q:
-        # Text search first
         text_filter = dict(base_filter)
         text_filter["$text"] = {"$search": q}
         docs = list(books_coll.find(text_filter, fields).sort("title", 1))
 
-        # Fallback to regex
         if not docs:
             rx = {"$regex": q, "$options": "i"}
             rx_filter = {
@@ -102,13 +74,14 @@ def titles_page():
                     {"title": rx},
                     {"authors": rx},
                     {"genres": rx},
-                    {"description": rx}
-                ]
+                    {"description": rx},
+                ],
             }
             docs = list(books_coll.find(rx_filter, fields).sort("title", 1))
-    else:
+    if not docs:
         docs = list(books_coll.find(base_filter, fields).sort("title", 1))
 
+    # transform for template cards
     cards = [{
         "_id": str(d["_id"]),
         "title": d.get("title", ""),
@@ -116,7 +89,7 @@ def titles_page():
         "img": d.get("url", ""),
         "category_line": f"{d.get('category', '')}, " + ", ".join(d.get("genres", [])),
         "pages": d.get("pages", 0),
-        "short_desc": first_last(d.get("description", []))
+        "short_desc": first_last(d.get("description", [])),
     } for d in docs]
 
     return render_template(
@@ -125,23 +98,35 @@ def titles_page():
         cards=cards,
         categories=CATEGORIES,
         selected=selected,
-        q=q
+        q=q,  # pass q so you can show it in the UI if desired
     )
 
-@app.route("/book/<id>")
-def book_details(id):
+@app.route("/book/<key>")
+def book_details(key):
+    """
+    Accepts either a Mongo _id (ObjectId string)
+    or a book title (exact match).
+    """
+    doc = None
+    # try as ObjectId
     try:
-        obj_id = ObjectId(id)
+        doc = books_coll.find_one({"_id": ObjectId(key)})
     except Exception:
-        abort(404)
-    d = books_coll.find_one({"_id": obj_id})
-    if not d:
-        abort(404)
-    d["_id"] = str(d["_id"])
-    return render_template("book_details.html", book=d)
+        doc = None
 
-# -------- Main --------
+    # fallback: by title
+    if not doc:
+        doc = books_coll.find_one({"title": key})
+
+    if not doc:
+        abort(404)
+
+    doc["_id"] = str(doc["_id"])
+    return render_template("book_details.html", book=doc)
+
+# ----------------- Main ---------------------
 if __name__ == "__main__":
-    host = "0.0.0.0"
+    host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8080"))
+    print(f"Server binding: http://{host}:{port}")
     app.run(host=host, port=port, debug=True)

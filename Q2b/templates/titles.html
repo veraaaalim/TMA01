@@ -8,67 +8,59 @@
     <h1>BOOK TITLES</h1>
   </header>
 
-  <!-- Count + Category + Search -->
+  <!-- Count + Category -->
   <section class="topbar">
     <div class="count">Number of titles: {{ total }}</div>
 
     <form action="{{ url_for('titles_page') }}" method="get" class="filter">
-      <label for="category">Category</label>
-      <select id="category" name="category">
-        {% for c in categories %}
-          <option value="{{ c }}" {{ 'selected' if c == selected else '' }}>{{ c }}</option>
-        {% endfor %}
-      </select>
-
-      <input type="text"
-             name="q"
-             placeholder="Search title / author..."
-             value="{{ q or '' }}"
-             aria-label="Search books">
-
-      <button class="btn btn-search" type="submit">Search</button>
-    </form>
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          {% for c in categories %}
+            <option value="{{ c }}" {{ 'selected' if c == selected else '' }}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      
+        <!-- NEW: free-text search box -->
+        <input
+          type="text"
+          id="q"
+          name="q"
+          value="{{ q or '' }}"
+          placeholder="Search title, author, genre…"
+          aria-label="Search books"
+        />
+      
+        <button class="btn btn-search" type="submit">Search</button>
+      </form>
+      
   </section>
 
   <!-- Cards -->
   <section class="cards">
-    {% if cards and cards|length > 0 %}
-      {% for b in cards %}
-        <article class="card">
-          <a href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
-            <img class="cover" src="{{ b.img }}" alt="{{ b.title }} cover">
-          </a>
+    {% for b in cards %}
+      <article class="card">
+        <img class="cover" src="{{ b.img }}" alt="{{ b.title }} cover">
 
-          <div class="card-body">
-            <h2 class="title">
-              <a href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
-                {{ b.title }}
-              </a>
-            </h2>
+        <div class="card-body">
+          <h2 class="title">{{ b.title }}</h2>
+          <div class="byline">By {{ b.authors }}</div>
 
-            <div class="byline">By {{ b.authors }}</div>
-
-            <div class="meta">
-              Category: {{ b.category_line }}<br>
-              Pages: {{ b.pages }}
-            </div>
-
-            <p class="desc">{{ b.short_desc }}</p>
-
-            <div class="actions">
-              <a class="btn btn-details"
-                 href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
-                More details
-              </a>
-            </div>
+          <div class="meta">
+            Category: {{ b.category_line }}<br>
+            Pages: {{ b.pages }}
           </div>
-        </article>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state">
-        No books found{% if q %} for “{{ q }}”{% endif %}{% if selected and selected != 'All' %} in {{ selected }}{% endif %}.
-      </div>
-    {% endif %}
+
+          <p class="desc">{{ b.short_desc }}</p>
+
+          <div class="actions">
+            <a class="btn btn-details"
+               href="{{ url_for('book_details', key=b['_id']) }}?from={{ selected }}">
+              More details
+            </a>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
   </section>
 {% endblock %}
 

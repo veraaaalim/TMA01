@@ -9,29 +9,25 @@
   </header>
 
   <article class="details-card">
-    <img class="cover-lg" src="{{ book.url }}" alt="{{ book.title }} cover">
+    <img class="cover-lg" src="{{ book.url | default('') }}" alt="{{ book.title }} cover">
 
     <div class="details-body">
       <h2 class="title">{{ book.title }}</h2>
 
       <div class="byline">
-        By {{ ", ".join(book.authors) }}
+        By {{ ", ".join(book.authors | default([])) }}
         {% if book.get('illustrator') %}, {{ book.illustrator }} (Illustrator){% endif %}
       </div>
 
       <div class="meta">
-        Category: {{ book.category }}, {{ ", ".join(book.genres) }}<br>
+        Category: {{ book.category }}, {{ ", ".join(book.genres | default([])) }}<br>
         Pages: {{ book.pages }}<br>
-        {% if book.get('copies') is not none %}
-          Copies: {{ book.copies }}
-        {% endif %}
-        {% if book.get('available') is not none %}
-          | Available: {{ book.available }}
-        {% endif %}
+        {% if book.get('copies') is not none %}Copies: {{ book.copies }}{% endif %}
+        {% if book.get('available') is not none %} | Available: {{ book.available|int }}{% endif %}
       </div>
 
       <div class="desc">
-        {% for para in book.description %}
+        {% for para in (book.description or []) %}
           {% if para and para.strip() %}
             <p>{{ para }}</p>
           {% endif %}
@@ -40,7 +36,7 @@
 
       <div class="actions">
         <a class="btn btn-back"
-           href="{{ url_for('titles_page', category=request.args.get('from', 'All'), q=request.args.get('q','')) }}">
+           href="{{ url_for('titles_page', category=request.args.get('from', 'All')) }}">
           Back to list
         </a>
       </div>
