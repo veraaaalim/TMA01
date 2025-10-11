@@ -18,73 +18,43 @@
         {% endfor %}
       </select>
 
-      <input type="text"
-             name="q"
-             placeholder="Search title / author..."
-             value="{{ q or '' }}"
-             aria-label="Search books">
-
+      <input type="text" name="q" placeholder="Search title / author..."
+             value="{{ q or '' }}" aria-label="Search books">
       <button class="btn btn-search" type="submit">Search</button>
     </form>
   </section>
 
   <section class="cards">
-    {% if cards and cards|length > 0 %}
-      {% for b in cards %}
-        <article class="card">
-          <a href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
-            <img class="cover" src="{{ b.img }}" alt="{{ b.title }} cover">
-          </a>
+    {% for c in cards %}
+      <article class="card">
+        <img class="cover" src="{{ c.img }}" alt="{{ c.title }} cover">
+        <div class="card-body">
+          <h3 class="title">{{ c.title }}</h3>
+          <div class="byline">By {{ c.authors }}</div>
 
-          <div class="card-body">
-            <h2 class="title">
-              <a href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
-                {{ b.title }}
-              </a>
-            </h2>
-
-            {% if b.authors %}
-              <div class="byline">By {{ b.authors }}</div>
-            {% endif %}
-
-            <div class="meta">
-              Category: {{ b.category_line }}<br>
-              {% if b.pages %}Pages: {{ b.pages }}{% endif %}
-              {# Copies intentionally hidden on titles page #}
-            </div>
-
-            {% if b.short_desc %}
-              <p class="desc">{{ b.short_desc }}</p>
-            {% endif %}
-
-            <div class="actions" style="display:flex;gap:8px;">
-              {# Show only if available count/flag > 0 #}
-              {% if b.available|default(0)|int > 0 %}
-                <a class="btn btn-loan"
-                   href="{{ url_for('make_loan', id=b._id) }}"
-                   style="background:#2f855a;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;">
-                  Make a Loan
-                </a>
-              {% endif %}
-
-              <a class="btn btn-details"
-                 href="{{ url_for('book_details', id=b._id) }}?from={{ selected }}&q={{ q or '' }}">
-                More details
-              </a>
-            </div>
+          <div class="meta">
+            <span>Category: {{ c.category_line }}</span>
+            <span>Pages: {{ c.pages }}</span>
           </div>
-        </article>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state">
-        No books found{% if q %} for “{{ q }}”{% endif %}{% if selected and selected != 'All' %} in {{ selected }}{% endif %}.
-      </div>
-    {% endif %}
-  </section>
-{% endblock %}
 
-{% block banner_title %}
-  <div class="page-header banner-title" style="margin:0">
-    <h1>BOOK TITLES</h1>
-  </div>
+          {# First & last description paragraphs #}
+          {% set paras = (c.short_desc or '').split('\n\n') %}
+          {% if paras and paras[0] %}<p class="desc">{{ paras[0] }}</p>{% endif %}
+          {% if paras|length > 1 and paras[-1] %}<p class="desc">{{ paras[-1] }}</p>{% endif %}
+
+          <div class="actions equal">
+            {% if (c.available|int) > 0 %}
+              {# UI-only green button; does nothing #}
+              <button type="button" class="btn btn-loan" aria-label="Make a Loan (UI only)">
+                Make a Loan
+              </button>
+            {% endif %}
+            <a class="btn btn-details" href="{{ url_for('book_details', id=c._id) }}">
+              More details
+            </a>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </section>
 {% endblock %}

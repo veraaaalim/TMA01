@@ -3,10 +3,13 @@
 {% block title %}Book Details • SG Library{% endblock %}
 
 {% block content %}
-  <!-- Desktop/Tablet (md+) green strip -->
   <header class="page-header desktop-title">
     <h1>BOOK DETAILS</h1>
   </header>
+
+  {% set avail =
+       (book.available if book.available is defined else
+        book.get('available', book.get('copies_available', book.get('copies', 0)))) | int %}
 
   <article class="details-card">
     <img class="cover-lg" src="{{ book.url }}" alt="{{ book.title }} cover">
@@ -23,20 +26,24 @@
         Category: {{ book.category }}, {{ ", ".join(book.genres) }}<br>
         Pages: {{ book.pages }}<br>
         {% if book.get('copies') %}Copies: {{ book.copies }}{% endif %}
-        {% if book.get('available') is not none %} | Available: {{ 1 if book.available else 0 }}{% endif %}
+        {% if book.get('available') is not none %} | Available: {{ avail }}{% endif %}
       </div>
 
       <div class="desc">
         {% for para in book.description %}
-          {% if para and para.strip() %}
-            <p>{{ para }}</p>
-          {% endif %}
+          {% if para and para.strip() %}<p>{{ para }}</p>{% endif %}
         {% endfor %}
       </div>
 
-      <div class="actions">
+      <div class="actions equal">
+        {% if avail > 0 %}
+          {# UI-only green button; does nothing #}
+          <button type="button" class="btn btn-loan" aria-label="Make a Loan (UI only)">
+            Make a Loan
+          </button>
+        {% endif %}
         <a class="btn btn-back"
-           href="{{ url_for('titles_page', category=request.args.get('from', 'All'), q=request.args.get('q','')) }}">
+           href="{{ url_for('titles_page', category=request.args.get('from','All'), q=request.args.get('q','')) }}">
           Back to list
         </a>
       </div>
@@ -45,7 +52,6 @@
 {% endblock %}
 
 {% block banner_title %}
-  <!-- On small/medium screens the green title strip lives inside the slide-down panel -->
   <div class="page-header banner-title" style="margin:0">
     <h1>BOOK DETAILS</h1>
   </div>
