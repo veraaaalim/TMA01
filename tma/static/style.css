@@ -50,10 +50,16 @@ body{
 }
 
 /* Desktop nav */
-.nav{padding:8px}
-.nav-link{display:block;color:#fff;text-decoration:none;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.12)}
-.nav-link:hover{background:rgba(255,255,255,.18)}
-.nav-link.active{background:rgba(255,255,255,.22)}
+/* Replace your desktop nav styles with this */
+.nav { padding: 8px; }
+.nav-link{
+  display:block; color:#fff; text-decoration:none;
+  padding:10px 12px; border-radius:10px;
+  background:transparent;                 /* no box */
+}
+.nav-link:hover{ background:transparent; opacity:.9; }
+.nav-link.active{ background:transparent; font-weight:600; }
+
 
 .sidebar-photo{flex:1}
 
@@ -85,7 +91,7 @@ body{
   text-transform:uppercase;
 }
 
-/* ===== Filter bar (one line + green background) ===== */
+/* ===== Filter bar ===== */
 .content > :where(section).topbar{
   display:flex !important;
   align-items:center !important;
