@@ -14,27 +14,31 @@
       {% for L in loans %}
         <article class="card">
           {% if L.cover %}
-            <img class="cover" src="{{ L.cover }}" alt="">
+            <img class="cover" src="{{ L.cover }}" alt="{{ L.title }} cover">
           {% endif %}
+
           <div class="card-body">
             <h3 class="title">{{ L.title }}</h3>
+
             <div class="meta">
-              <span>Borrowed: {{ L.borrowDate }}</span>
-              {% if L.returnDate %}
-                <span>Returned: {{ L.returnDate }}</span>
+              <span>Borrowed: {{ L.borrow_date.strftime('%Y-%m-%d') if L.borrow_date else '-' }}</span>
+              {% if L.returned %}
+                <span>Returned: {{ L.return_date.strftime('%Y-%m-%d') if L.return_date else '-' }}</span>
               {% else %}
-                <span>Status: On Loan</span>
+                <span>Status: On loan</span>
               {% endif %}
-              <span>Renewals: {{ L.renewCount }}</span>
             </div>
 
             <div class="card-actions">
-              {% if not L.returnDate %}
-                <a class="btn btn-loan push-right" href="{{ url_for('renew_loan', loan_id=L._id) }}">Renew</a>
-                <a class="btn btn-return" href="{{ url_for('return_loan', id=L._id) }}">Return</a>
+              {% if not L.returned and L.book_id %}
+                <a class="btn btn-return" href="{{ url_for('return_loan', id=L.book_id) }}">Return One</a>
+                <a class="btn btn-details" href="{{ url_for('book_details', id=L.book_id) }}">Details</a>
               {% else %}
-                <a class="btn btn-na push-right" role="button" aria-disabled="true" tabindex="-1">Returned</a>
-                <a class="btn btn-details" href="{{ url_for('delete_loan', loan_id=L._id) }}">Delete</a>
+                <span class="btn btn-na" role="button" aria-disabled="true" tabindex="-1">Returned</span>
+                <a class="btn btn-details" href="{{ url_for('book_details', id=L.book_id) }}">Details</a>
+                {% if L._id %}
+                  <a class="btn btn-loan" href="{{ url_for('delete_loan', loan_id=L._id) }}">Delete</a>
+                {% endif %}
               {% endif %}
             </div>
           </div>

@@ -2,15 +2,15 @@ from flask import (
     Flask, render_template, request, abort,
     url_for, redirect, flash
 )
-from pymongo import MongoClient, errors
+from pymongo import MongoClient, errors, ReturnDocument
 from bson import ObjectId
 from flask_login import (
     LoginManager, UserMixin, login_user,
     login_required, logout_user, current_user
 )
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
+import random
 import os, sys
 
 # -------- Flask app --------
@@ -27,11 +27,11 @@ except errors.ServerSelectionTimeoutError as e:
     print(f"[Mongo ERROR] Cannot connect → {e}", file=sys.stderr)
 
 db = client["sg_library"]
-books_coll  = db["books"]
-users_coll  = db["users"]
-loans_coll  = db["loans"]
+books_coll = db["books"]
+users_coll = db["users"]
+loans_coll = db["loans"]
 
-# ---- Seed Books from provided list on first run ----
+# ---- Seed Books ----
 from books import all_books  # source data for seeding
 
 def seed_books_if_empty(coll, all_books):
@@ -39,13 +39,8 @@ def seed_books_if_empty(coll, all_books):
         docs = []
         for b in all_books:
             copies = int(b.get("copies", 0))
-            available = b.get("available", copies)
-            try:
-                available = int(available)
-            except Exception:
-                available = copies
             docs.append({
-                "title": b.get("title", ""),
+                "title": b.get("title", "").strip(),
                 "authors": b.get("authors", []),
                 "category": b.get("category", ""),
                 "genres": b.get("genres", []),
@@ -53,18 +48,16 @@ def seed_books_if_empty(coll, all_books):
                 "description": b.get("description", []),
                 "pages": b.get("pages", 0),
                 "copies": copies,
-                "available": max(0, available)
+                "available": copies
             })
         if docs:
             coll.insert_many(docs)
             coll.create_index("title")
             coll.create_index("category")
-            coll.create_index([
-                ("title", "text"),
-                ("authors", "text"),
-                ("genres", "text"),
-                ("description", "text")
-            ])
+            coll.create_index([("title", "text"),
+                               ("authors", "text"),
+                               ("genres", "text"),
+                               ("description", "text")])
             print("[MongoDB] Seeded books and created indexes")
 
 try:
@@ -72,7 +65,7 @@ try:
 except Exception as e:
     print(f"[Seed WARNING] {e}", file=sys.stderr)
 
-# ---- Seed default users ----
+# ---- Seed default users  ----
 def seed_users_if_empty():
     if users_coll.estimated_document_count() == 0:
         users_coll.insert_many([
@@ -97,17 +90,21 @@ try:
 except Exception as e:
     print(f"[User Seed WARNING] {e}", file=sys.stderr)
 
+# ---- Indexes for loans ----
 try:
-    loans_coll.create_index([("member", 1)])
-    loans_coll.create_index([("book", 1)])
-    loans_coll.create_index([("borrowDate", -1)])
-    loans_coll.create_index([("member", 1), ("book", 1), ("returnDate", 1)])
+    loans_coll.create_index([("user_id", 1), ("book_id", 1), ("returned", 1)])
 except Exception as e:
-    print(f"[Loan Index WARNING] {e}", file=sys.stderr)
+    print(f"[Loans Index WARNING] {e}", file=sys.stderr)
 
 # -------- Auth (Flask-Login) --------
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+
+# show the required flash and send to login
+@login_manager.unauthorized_handler
+def _unauth():
+    flash("Please login or register first to get an account", "info")
+    return redirect(url_for("login", next=request.path))
 
 class User(UserMixin):
     def __init__(self, doc):
@@ -119,207 +116,14 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        doc = users_coll.find_one({"_id": ObjectId(user_id)})
+        oid = ObjectId(user_id)
     except Exception:
-        doc = None
+        return None
+    doc = users_coll.find_one({"_id": oid})
     return User(doc) if doc else None
-
-# -------- Book domain wrapper --------
-class Book:
-    """Thin domain wrapper for a book document with borrow/return behavior."""
-    def __init__(self, coll, doc):
-        self._coll = coll
-        self.doc = doc
-        self.id = doc["_id"] if isinstance(doc["_id"], ObjectId) else ObjectId(doc["_id"])
-
-    @property
-    def copies(self) -> int:
-        try:
-            return int(self.doc.get("copies", 0))
-        except Exception:
-            return 0
-
-    @property
-    def available(self) -> int:
-        try:
-            return int(self.doc.get("available", self.copies))
-        except Exception:
-            return self.copies
-
-    @classmethod
-    def get(cls, coll, book_id: str | ObjectId):
-        try:
-            oid = ObjectId(book_id)
-        except Exception:
-            return None
-        doc = coll.find_one({"_id": oid})
-        return cls(coll, doc) if doc else None
-
-    def _reload(self):
-        fresh = self._coll.find_one({"_id": self.id})
-        if fresh:
-            self.doc = fresh
-
-    def borrow(self) -> tuple[bool, str]:
-        """Decrease available by 1 if > 0. Atomic and bounded."""
-        if self.available <= 0:
-            return False, "No copies available to loan."
-        res = self._coll.update_one(
-            {"_id": self.id, "available": {"$gt": 0}},
-            {"$inc": {"available": -1}}
-        )
-        if res.modified_count == 1:
-            self._reload()
-            return True, "Loan created."
-        return False, "Loan failed due to a concurrent update. Please try again."
-
-    def return_one(self) -> tuple[bool, str]:
-        """Increase available by 1 only if at least one copy was borrowed."""
-        if self.available >= self.copies:
-            return False, "All copies are already in stock."
-        res = self._coll.update_one(
-            {"_id": self.id, "available": {"$lt": self.copies}},
-            {"$inc": {"available": +1}}
-        )
-        if res.modified_count == 1:
-            self._reload()
-            return True, "Book returned."
-        return False, "Return failed due to a concurrent update. Please try again."
-
-# -------- Loan class --------
-class Loan:
-    """
-    Loan document model (diagram-compliant):
-      _id: ObjectId
-      member: ObjectId  (ref -> users._id)
-      book: ObjectId    (ref -> books._id)
-      borrowDate: datetime (UTC)
-      returnDate: datetime or absent
-      renewCount: int
-    """
-    def __init__(self, coll, doc):
-        self._coll = coll
-        self.doc = doc
-        self.id = doc["_id"] if isinstance(doc["_id"], ObjectId) else ObjectId(doc["_id"])
-
-    # --- Retrieval ---
-    @classmethod
-    def get(cls, coll, loan_id: str | ObjectId):
-        try:
-            oid = ObjectId(loan_id)
-        except Exception:
-            return None
-        d = coll.find_one({"_id": oid})
-        return cls(coll, d) if d else None
-
-    @classmethod
-    def list_for_user(cls, coll, user_id: str | ObjectId):
-        try:
-            uid = ObjectId(user_id)
-        except Exception:
-            return []
-        docs = list(coll.find({"member": uid}).sort("borrowDate", -1))
-        return [cls(coll, d) for d in docs]
-
-    @classmethod
-    def has_open_loan(cls, coll, user_id: ObjectId, book_id: ObjectId) -> bool:
-        return coll.count_documents({
-            "member": user_id,
-            "book": book_id,
-            "returnDate": {"$exists": False}
-        }) > 0
-
-    # --- Create ---
-    @classmethod
-    def create(cls, loans_coll, books_coll, user_id: str | ObjectId,
-               book_id: str | ObjectId, borrow_date: datetime | None = None) -> tuple[bool, str, "Loan|None"]:
-        try:
-            uid = ObjectId(user_id); bid = ObjectId(book_id)
-        except Exception:
-            return False, "Invalid user or book id.", None
-
-        if cls.has_open_loan(loans_coll, uid, bid):
-            return False, "You already have an unreturned loan for this title.", None
-
-        book = Book.get(books_coll, bid)
-        if not book:
-            return False, "Book not found.", None
-
-        ok, msg = book.borrow()
-        if not ok:
-            return False, msg, None
-
-        loan_doc = {
-            "member": uid,
-            "book": bid,
-            "borrowDate": (borrow_date or datetime.now(timezone.utc)),
-            "renewCount": 0
-        }
-        try:
-            ins = loans_coll.insert_one(loan_doc)
-            loan_doc["_id"] = ins.inserted_id
-            return True, "Loan created.", cls(loans_coll, loan_doc)
-        except Exception as e:
-            book.return_one()
-            return False, f"Failed to create loan: {e}", None
-
-    # --- Update: renew ---
-    def renew(self) -> tuple[bool, str]:
-        if self.doc.get("returnDate"):
-            return False, "Cannot renew a returned loan."
-        res = self._coll.update_one(
-            {"_id": self.id, "returnDate": {"$exists": False}},
-            {
-                "$set": {"borrowDate": datetime.now(timezone.utc)},
-                "$inc": {"renewCount": 1}
-            }
-        )
-        if res.modified_count == 1:
-            self.doc = self._coll.find_one({"_id": self.id})
-            return True, "Loan renewed."
-        return False, "Renew failed (maybe concurrent update)."
-
-    # --- Update: return ---
-    def mark_returned(self, books_coll) -> tuple[bool, str]:
-        if self.doc.get("returnDate"):
-            return False, "Loan already returned."
-
-        now = datetime.now(timezone.utc)
-        res = self._coll.update_one(
-            {"_id": self.id, "returnDate": {"$exists": False}},
-            {"$set": {"returnDate": now}}
-        )
-        if res.modified_count != 1:
-            return False, "Return failed (maybe concurrent update)."
-
-        book = Book.get(books_coll, self.doc["book"])
-        if not book:
-            return False, "Book not found to complete return."
-        bok, bmsg = book.return_one()
-        if not bok:
-            return False, bmsg
-
-        self.doc = self._coll.find_one({"_id": self.id})
-        return True, "Book returned."
-
-    # --- Delete ---
-    def delete(self) -> tuple[bool, str]:
-        if not self.doc.get("returnDate"):
-            return False, "Only returned loans can be deleted."
-        res = self._coll.delete_one({"_id": self.id})
-        if res.deleted_count == 1:
-            return True, "Loan deleted."
-        return False, "Delete failed."
 
 # -------- App constants/helpers --------
 CATEGORIES = ["All", "Children", "Teens", "Adult"]
-GENRES = [
-    "Animals","Business","Comics","Communication","Dark Academia","Emotion","Fantasy",
-    "Fiction","Friendship","Graphic Novels","Grief","Historical Fiction","Indigenous",
-    "Inspirational","Magic","Mental Health","Nonfiction","Personal Development",
-    "Philosophy","Picture Books","Poetry","Productivity","Psychology","Romance",
-    "School","Self Help"
-]
 
 def first_last(paras):
     parts = [p.strip() for p in paras if p and p.strip()]
@@ -327,14 +131,11 @@ def first_last(paras):
         return ""
     return parts[0] if len(parts) == 1 else f"{parts[0]}\n\n{parts[-1]}"
 
-def admin_required(view):
-    @wraps(view)
-    @login_required
-    def wrapped(*args, **kwargs):
-        if not getattr(current_user, "is_admin", False):
-            abort(403)
-        return view(*args, **kwargs)
-    return wrapped
+def to_oid(id_str):
+    try:
+        return ObjectId(id_str)
+    except Exception:
+        return None
 
 # -------- Routes --------
 @app.route("/")
@@ -351,9 +152,9 @@ def titles_page():
         base_filter["category"] = selected
 
     fields = {
-        "title": 1, "authors": 1, "url": 1, "category": 1, "genres": 1,
-        "pages": 1, "description": 1,
-        "copies": 1, "available": 1
+        "title": 1, "authors": 1, "url": 1,
+        "category": 1, "genres": 1, "pages": 1,
+        "description": 1, "copies": 1, "available": 1
     }
 
     if q:
@@ -372,11 +173,8 @@ def titles_page():
 
     cards = []
     for d in docs:
-        try:
-            avail = int(d.get("available", d.get("copies", 0)))
-        except Exception:
-            avail = 0
-
+        copies = int(d.get("copies", 0) or 0)
+        available = int(d.get("available", 0) or 0)
         cards.append({
             "_id": str(d["_id"]),
             "title": d.get("title", ""),
@@ -385,8 +183,8 @@ def titles_page():
             "category_line": f"{d.get('category', '')}, " + ", ".join(d.get("genres", [])),
             "pages": d.get("pages", 0),
             "short_desc": first_last(d.get("description", [])),
-            "available": avail,
-            "copies": d.get("copies", 0),
+            "copies": copies,
+            "available": available
         })
 
     return render_template(
@@ -400,100 +198,152 @@ def titles_page():
 
 @app.route("/book/<id>")
 def book_details(id):
-    try:
-        obj_id = ObjectId(id)
-    except Exception:
+    oid = to_oid(id)
+    if not oid:
         abort(404)
-    d = books_coll.find_one({"_id": obj_id})
+    d = books_coll.find_one({"_id": oid})
     if not d:
         abort(404)
     d["_id"] = str(d["_id"])
     return render_template("book_details.html", book=d)
 
-# ---- Loan routes  ----
-@app.route("/loans", methods=["GET"])
-@login_required
-def my_loans():
-    loans = [L.doc for L in Loan.list_for_user(loans_coll, current_user.id)]
-    view = []
-    for doc in loans:
-        b = books_coll.find_one({"_id": doc["book"]}, {"title":1, "url":1})
-        view.append({
-            "_id": str(doc["_id"]),
-            "title": (b or {}).get("title", "(deleted)"),
-            "cover": (b or {}).get("url", ""),
-            "borrowDate": doc.get("borrowDate"),
-            "returnDate": doc.get("returnDate"),
-            "renewCount": doc.get("renewCount", 0),
-            "book": str(doc["book"]),
-        })
-    return render_template("loans.html", loans=view)
-
-@app.route("/loans/make/<id>", methods=["POST","GET"])
+# -------- Loans --------
+@app.route("/loans/make/<id>", methods=["POST", "GET"])
 @login_required
 def make_loan(id):
-    ok, msg, _loan = Loan.create(
-        loans_coll=loans_coll,
-        books_coll=books_coll,
-        user_id=current_user.id,
-        book_id=id,
-        borrow_date=datetime.now(timezone.utc),
-    )
-    flash(msg, "success" if ok else "error")
-    return redirect(url_for("book_details", id=id))
+    book_oid = to_oid(id)
+    if not book_oid:
+        flash("Invalid book id.", "error")
+        return redirect(url_for("titles_page"))
 
-@app.route("/loans/renew/<loan_id>", methods=["POST","GET"])
-@login_required
-def renew_loan(loan_id):
-    loan = Loan.get(loans_coll, loan_id)
-    if not loan:
-        flash("Loan not found.", "error")
-        return redirect(url_for("my_loans"))
-    if str(loan.doc["member"]) != current_user.id:
-        abort(403)
-    ok, msg = loan.renew()
-    flash(msg, "success" if ok else "error")
-    return redirect(url_for("my_loans"))
+    book = books_coll.find_one({"_id": book_oid}, {"title": 1, "available": 1, "copies": 1})
+    if not book:
+        flash("Book not found.", "error")
+        return redirect(url_for("titles_page"))
+
+    active = loans_coll.find_one({
+        "user_id": ObjectId(current_user.id),
+        "book_id": book_oid,
+        "returned": False
+    })
+    if active:
+        flash("You already have this title on loan. Please return it before borrowing again.", "warning")
+        return redirect(url_for("book_details", id=id))
+
+    updated = books_coll.find_one_and_update(
+        {"_id": book_oid, "available": {"$gt": 0}},
+        {"$inc": {"available": -1}},
+        return_document=ReturnDocument.AFTER
+    )
+    if not updated:
+        flash("No copies available to loan.", "error")
+        return redirect(url_for("book_details", id=id))
+
+    # Create the loan with random borrow_date 
+    days_ago = random.randint(10, 20)
+    borrow_date = datetime.now() - timedelta(days=days_ago)
+
+    loans_coll.insert_one({
+        "user_id": ObjectId(current_user.id),
+        "book_id": book_oid,
+        "title": book.get("title", ""),
+        "borrow_date": borrow_date,
+        "returned": False,
+        "return_date": None
+    })
+
+    flash("Loan created successfully. Enjoy your book!", "success")
+    return redirect(url_for("book_details", id=id))
 
 @app.route("/loans/return/<id>", methods=["POST", "GET"])
 @login_required
 def return_loan(id):
-    loan = Loan.get(loans_coll, id)
-    if loan and str(loan.doc["member"]) == current_user.id:
-        ok, msg = loan.mark_returned(books_coll)
-        flash(msg, "success" if ok else "error")
-        return redirect(url_for("my_loans"))
-
-    try:
-        uid = ObjectId(current_user.id); bid = ObjectId(id)
-    except Exception:
-        flash("Invalid identifier.", "error")
+    """Mark one active loan for this user & book as returned, increment available."""
+    book_oid = to_oid(id)
+    if not book_oid:
+        flash("Invalid book id.", "error")
         return redirect(url_for("titles_page"))
 
-    open_loan = loans_coll.find_one({
-        "member": uid, "book": bid, "returnDate": {"$exists": False}
-    })
-    if not open_loan:
-        flash("No open loan for this title.", "error")
+    loan = loans_coll.find_one_and_update(
+        {
+            "user_id": ObjectId(current_user.id),
+            "book_id": book_oid,
+            "returned": False
+        },
+        {
+            "$set": {"returned": True, "return_date": datetime.now()}
+        },
+        return_document=ReturnDocument.BEFORE
+    )
+    if not loan:
+        flash("No active loan to return for this title.", "warning")
         return redirect(url_for("book_details", id=id))
 
-    loan = Loan(loans_coll, open_loan)
-    ok, msg = loan.mark_returned(books_coll)
-    flash(msg, "success" if ok else "error")
+    books_coll.update_one({"_id": book_oid}, {"$inc": {"available": 1}})
+    flash("Book returned. Thank you!", "success")
     return redirect(url_for("book_details", id=id))
 
-@app.route("/loans/delete/<loan_id>", methods=["POST","GET"])
+@app.route("/loans")
+@login_required
+def my_loans():
+    pipeline = [
+        {"$match": {"user_id": ObjectId(current_user.id)}},
+        {"$sort": {"borrow_date": -1}},
+        {
+            "$lookup": {
+                "from": "books",
+                "localField": "book_id",
+                "foreignField": "_id",
+                "as": "book"
+            }
+        },
+        {"$unwind": {"path": "$book", "preserveNullAndEmptyArrays": True}},
+        {
+            "$project": {
+                "title": 1,
+                "borrow_date": 1,
+                "returned": 1,
+                "return_date": 1,
+                "book_id": 1,
+                "book_cover": {"$ifNull": ["$book.url", ""]},
+            }
+        }
+    ]
+    rows = list(loans_coll.aggregate(pipeline))
+    items = [{
+        "_id": str(r.get("_id")) if r.get("_id") else "", 
+        "title": r.get("title", ""),
+        "borrow_date": r.get("borrow_date"),
+        "returned": bool(r.get("returned", False)),
+        "return_date": r.get("return_date"),
+        "book_id": str(r.get("book_id")) if r.get("book_id") else "",
+        "cover": r.get("book_cover", "")
+    } for r in rows]
+    return render_template("loans.html", loans=items)
+
+
+@app.route("/loans/delete/<loan_id>", methods=["POST", "GET"])
 @login_required
 def delete_loan(loan_id):
-    loan = Loan.get(loans_coll, loan_id)
+    try:
+        oid = ObjectId(loan_id)
+    except Exception:
+        flash("Invalid loan id.", "error")
+        return redirect(url_for("my_loans"))
+
+    loan = loans_coll.find_one({"_id": oid, "user_id": ObjectId(current_user.id)})
     if not loan:
         flash("Loan not found.", "error")
         return redirect(url_for("my_loans"))
-    if str(loan.doc["member"]) != current_user.id and not current_user.is_admin:
-        abort(403)
-    ok, msg = loan.delete()
-    flash(msg, "success" if ok else "error")
+
+    if not loan.get("returned", False) and not loan.get("returnDate"):
+        flash("You can delete only returned loans.", "warning")
+        return redirect(url_for("my_loans"))
+
+    loans_coll.delete_one({"_id": oid})
+    flash("Loan deleted.", "info")
     return redirect(url_for("my_loans"))
+
 
 # -------- Auth pages --------
 @app.route("/register", methods=["GET", "POST"])
@@ -538,7 +388,8 @@ def login():
         if user_doc and check_password_hash(user_doc["password"], password):
             login_user(User(user_doc))
             flash("Login successful.", "success")
-            return redirect(url_for("titles_page"))
+            nxt = request.args.get("next")
+            return redirect(nxt or url_for("titles_page"))
         flash("Invalid email or password.", "error")
 
     return render_template("login.html")
@@ -549,69 +400,6 @@ def logout():
     logout_user()
     flash("Logged out.", "info")
     return redirect(url_for("titles_page"))
-
-# -------- New Book  --------
-@app.route("/books/new", methods=["GET", "POST"])
-@admin_required
-def new_book():
-    if not current_user.is_admin:
-        flash("Only admin users can add new books.", "error")
-        return redirect(url_for("titles_page"))
-    if request.method == "POST":
-        title = request.form.get("title", "").strip()
-        category = request.form.get("category", "").strip()
-        url_ = request.form.get("url", "").strip()
-        description = request.form.get("description", "").splitlines()
-        genres = request.form.getlist("genres")
-
-        a_names, illustrators = [], []
-        for i in range(1, 6):
-            name = request.form.get(f"author{i}", "").strip()
-            if name:
-                a_names.append(name)
-                if request.form.get(f"illus{i}") == "on":
-                    illustrators.append(name)
-
-        def as_int(v, default=0):
-            try:
-                return int(v)
-            except Exception:
-                return default
-        pages = as_int(request.form.get("pages", "0"))
-        copies = as_int(request.form.get("copies", "1"))
-
-        if not title:
-            flash("Title is required.", "error")
-            return redirect(url_for("new_book"))
-        if category not in [c for c in CATEGORIES if c != "All"]:
-            flash("Please choose a valid category.", "error")
-            return redirect(url_for("new_book"))
-
-        doc = {
-            "title": title,
-            "authors": a_names,
-            "illustrators": illustrators,
-            "category": category,
-            "genres": genres,
-            "url": url_,
-            "description": description,
-            "pages": pages,
-            "copies": copies,
-            "available": copies
-        }
-        try:
-            books_coll.insert_one(doc)
-            flash(f"“{title}” added successfully.", "success")
-        except Exception as e:
-            flash(f"Failed to add book: {e}", "error")
-
-        return redirect(url_for("new_book"))
-
-    return render_template(
-        "new_book.html",
-        categories=[c for c in CATEGORIES if c != "All"],
-        genres=GENRES
-    )
 
 # -------- Main --------
 if __name__ == "__main__":

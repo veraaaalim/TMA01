@@ -16,7 +16,6 @@
 
     <!-- Desktop nav -->
     <nav class="nav" aria-label="Main">
-      <!-- Book Titles: always -->
       <a class="nav-link {% if request.path.startswith('/titles') %}active{% endif %}"
          href="{{ url_for('titles_page') }}">
         <svg aria-hidden="true" viewBox="0 0 24 24" class="nav-ic">
