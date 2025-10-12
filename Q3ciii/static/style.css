@@ -88,6 +88,8 @@ body{
 /* Page header strip */
 .page-header{background:var(--green-100);border-bottom:2px solid var(--green-600);padding:12px 16px;margin-bottom:0}
 .page-header h1{margin:0;font-size:20px;font-weight:500;letter-spacing:.5px;color:#000;text-transform:uppercase}
+ */
+.loans-page .page-header{ margin:0 0 var(--gap-after-header) 0; }
 
 /* ===== Top filter bar ===== */
 .content > :where(section).topbar{
@@ -129,22 +131,21 @@ body{
   white-space:nowrap;
   display:inline-flex; align-items:center; justify-content:center;
 }
-.card-actions .push-right{ margin-left:auto; }   /* pushes this and following buttons to extreme right */
+.card-actions .push-right{ margin-left:auto; }
 .card-actions .btn-details{
   background:var(--green-700);
   color:#fff;
   text-decoration:none;
 }
 
-
 /* ===== Actions row & buttons  ===== */
 .actions.equal{
   display:flex;
   gap:12px;
-  justify-content:flex-end;       
+  justify-content:flex-end;
 }
 .actions.equal .btn{
-  width:180px !important;         
+  width:180px !important;
   padding:10px 16px;
   font-size:16px;
   border-radius:6px;
@@ -161,6 +162,19 @@ body{
 }
 .btn-details:hover,.btn-loan:hover,.btn-back:hover,.btn-submit:hover{ filter:brightness(.95) }
 
+/* 🔴 Global Delete button (red everywhere) */
+.btn-delete{
+  background:var(--red-600);
+  color:#fff !important;
+  text-decoration:none !important;
+  font-weight:600;
+  border:0;
+  border-radius:6px;
+  padding:10px 16px;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.btn-delete:hover{ background:var(--red-700); }
+
 /* Red "Not Available" button */
 .btn-na{
   background:var(--red-600);
@@ -171,7 +185,7 @@ body{
 }
 .btn-na:hover{ background:var(--red-700); filter:none }
 
-/* Return button */
+/* Return button (outline) */
 .btn-return{
   background:#fff;
   color:var(--green-700);
@@ -183,6 +197,78 @@ body{
 }
 .btn-return:hover{ filter:brightness(.98); }
 
+/* ------------------------------------------------------------------
+   LOANS TABLE (integrated)
+------------------------------------------------------------------- */
+
+/* Base table */
+.table-wrap{background:#fff;border-radius:8px;box-shadow:var(--shadow);overflow:auto}
+.table{width:100%;border-collapse:collapse}
+.table thead th{
+  text-align:left;font-weight:700;padding:12px 16px;
+  background:var(--green-200);border-bottom:1px solid var(--green-300);
+}
+.table tbody td{padding:14px 16px;border-top:1px solid #e8eceb;vertical-align:middle;font-size:14px}
+
+/* Center the middle three columns */
+.loans-table th:nth-child(2),
+.loans-table th:nth-child(3),
+.loans-table th:nth-child(4),
+.loans-table td:nth-child(2),
+.loans-table td:nth-child(3),
+.loans-table td:nth-child(4){ text-align:center }
+
+/* ---- Center the buttons column  ---- */
+.loans-table th:nth-child(5),
+.loans-table td:nth-child(5){
+  text-align:center !important;
+}
+
+/* === ACTIONS CELL === */
+.loans-table td.cell-right{
+  display:flex !important;
+  justify-content:center !important;    
+  align-items:center !important;       
+  align-content:center !important;      
+  gap:12px;
+  flex-wrap:nowrap;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  height:100%;                          
+}
+.loans-table td.cell-right a{
+  line-height:1 !important;             
+}
+
+/* ---- Button size/format  ---- */
+.loans-table td.cell-right .btn-details,
+.loans-table td.cell-right .btn-delete{
+  min-width:200px;
+  padding:12px 20px;
+  font-size:18px;
+  border-radius:8px;
+  font-weight:700;
+  white-space:nowrap;
+  display:inline-flex; align-items:center; justify-content:center;
+  text-decoration:none;
+}
+
+/* Colors */
+.loans-table td.cell-right .btn-details{
+  background:var(--green-700);
+  color:#fff;
+}
+.loans-table td.cell-right .btn-delete{
+  background:var(--red-600);
+  color:#fff;
+}
+.loans-table td.cell-right .btn-delete:hover{ background:var(--red-700); }
+
+/* Title/Author block */
+.loan-title.vertical{display:flex;flex-direction:column;align-items:flex-start}
+.loan-cover{width:58px;height:78px;object-fit:cover;border-radius:6px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.loan-title .t{font-size:14px;font-weight:400;line-height:1.25;color:#2f3b3c}
+.loan-title .a{font-size:14px;font-weight:400;line-height:1.2;color:#2f3b3c;margin-top:8px}
 
 /* ===== Book details card ===== */
 .details-card{
@@ -229,7 +315,7 @@ body{
 
 /* Author rows */
 .add-book-page .form-grid{ row-gap:8px; }
-.lb{ margin:6px 0 0; }
+.lb{ margin:8px 0 0; }
 .fld.fld-author{
   display:grid;
   grid-template-columns:minmax(0,1fr) max-content;

@@ -1,49 +1,96 @@
+{# templates/my_loans.html #}
 {% extends "base.html" %}
 
 {% block title %}My Loans • SG Library{% endblock %}
+{% block body_class %}loans-page{% endblock %}
 
 {% block content %}
+  <!-- Page header -->
   <header class="page-header">
-    <h1>MY LOANS</h1>
+    <h1>CURRENT LOANS</h1>
   </header>
 
   {% if loans|length == 0 %}
-    <p>You have no loans.</p>
+    <div class="card">
+      <div class="card-body">
+        <p>No loan currently</p>
+      </div>
+    </div>
   {% else %}
-    <section class="cards">
-      {% for L in loans %}
-        <article class="card">
-          {% if L.cover %}
-            <img class="cover" src="{{ L.cover }}" alt="{{ L.title }} cover">
-          {% endif %}
+    <div class="table-wrap">
+      <table class="table loans-table">
+        <colgroup>
+          <col style="width:38%">  {# Title/Author #}
+          <col style="width:16%">  {# Due Date #}
+          <col style="width:16%">  {# Return date #}
+          <col style="width:10%">  {# Renew Count #}
+          <col style="width:20%">  {# Actions #}
+        </colgroup>
 
-          <div class="card-body">
-            <h3 class="title">{{ L.title }}</h3>
+        <thead>
+          <tr>
+            <th>Title/Author</th>
+            <th class="cell-center">Due<br>Date</th>
+            <th class="cell-center">Return<br>date</th>
+            <th class="cell-center">Renew<br>Count</th>
+            <th class="actions-col"></th>  {# centered buttons, no label #}
+          </tr>
+        </thead>
 
-            <div class="meta">
-              <span>Borrowed: {{ L.borrow_date.strftime('%Y-%m-%d') if L.borrow_date else '-' }}</span>
+        <tbody>
+        {% for L in loans %}
+          <tr>
+            <!-- Title / Author -->
+            <td>
+              <div class="loan-title vertical">
+                {% if L.thumb %}
+                  <img class="loan-cover" src="{{ L.thumb }}" alt="">
+                {% endif %}
+                <div class="t">{{ L.title }}</div>
+                {% if L.authors %}
+                  <div class="a">By {{ L.authors }}</div>
+                {% endif %}
+              </div>
+            </td>
+
+            <!-- Due date -->
+            <td class="cell-center">
+              {% if L.due_date %}
+                <div class="date2 same-as-title">
+                  <span class="dm">{{ L.due_date.strftime('%d %b') }}</span>
+                  <span class="y">{{ L.due_date.strftime('%Y') }}</span>
+                </div>
+              {% else %}-{% endif %}
+            </td>
+
+            <!-- Return date -->
+            <td class="cell-center">
+              {% if L.return_date %}
+                <div class="date2 same-as-title">
+                  <span class="dm">{{ L.return_date.strftime('%d %b') }}</span>
+                  <span class="y">{{ L.return_date.strftime('%Y') }}</span>
+                </div>
+              {% else %}-{% endif %}
+            </td>
+
+            <!-- Renew count -->
+            <td class="cell-center">{{ L.renew_count }}</td>
+
+            <!-- Actions  -->
+            <td class="actions-col">
               {% if L.returned %}
-                <span>Returned: {{ L.return_date.strftime('%Y-%m-%d') if L.return_date else '-' }}</span>
+                <a class="btn btn-delete" href="{{ url_for('delete_loan', loan_id=L._id) }}">Delete</a>
               {% else %}
-                <span>Status: On loan</span>
-              {% endif %}
-            </div>
-
-            <div class="card-actions">
-              {% if not L.returned and L.book_id %}
-                <a class="btn btn-return" href="{{ url_for('return_loan', id=L.book_id) }}">Return One</a>
-                <a class="btn btn-details" href="{{ url_for('book_details', id=L.book_id) }}">Details</a>
-              {% else %}
-                <span class="btn btn-na" role="button" aria-disabled="true" tabindex="-1">Returned</span>
-                <a class="btn btn-details" href="{{ url_for('book_details', id=L.book_id) }}">Details</a>
-                {% if L._id %}
-                  <a class="btn btn-loan" href="{{ url_for('delete_loan', loan_id=L._id) }}">Delete</a>
+                <a class="btn btn-details" href="{{ url_for('return_loan', id=L._id) }}">Return</a>
+                {% if not L.overdue and (L.renew_count or 0) < 2 %}
+                  <a class="btn btn-details" href="{{ url_for('renew_loan', loan_id=L._id) }}">Renew</a>
                 {% endif %}
               {% endif %}
-            </div>
-          </div>
-        </article>
-      {% endfor %}
-    </section>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% endif %}
 {% endblock %}

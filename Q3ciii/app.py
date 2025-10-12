@@ -32,7 +32,7 @@ users_coll = db["users"]
 loans_coll = db["loans"]
 
 # ---- Seed Books ----
-from books import all_books  # source data for seeding
+from books import all_books
 
 def seed_books_if_empty(coll, all_books):
     if coll.estimated_document_count() == 0:
@@ -65,22 +65,12 @@ try:
 except Exception as e:
     print(f"[Seed WARNING] {e}", file=sys.stderr)
 
-# ---- Seed default users  ----
+# ---- Seed default users ----
 def seed_users_if_empty():
     if users_coll.estimated_document_count() == 0:
         users_coll.insert_many([
-            {
-                "email": "admin@lib.sg",
-                "password": generate_password_hash("12345"),
-                "name": "Admin",
-                "is_admin": True
-            },
-            {
-                "email": "poh@lib.sg",
-                "password": generate_password_hash("12345"),
-                "name": "Peter Oh",
-                "is_admin": False
-            }
+            {"email":"admin@lib.sg","password":generate_password_hash("12345"),"name":"Admin","is_admin":True},
+            {"email":"poh@lib.sg","password":generate_password_hash("12345"),"name":"Peter Oh","is_admin":False}
         ])
         users_coll.create_index("email", unique=True)
         print("[MongoDB] Seeded default users")
@@ -100,7 +90,6 @@ except Exception as e:
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# show the required flash and send to login
 @login_manager.unauthorized_handler
 def _unauth():
     flash("Please login or register first to get an account", "info")
@@ -122,13 +111,12 @@ def load_user(user_id):
     doc = users_coll.find_one({"_id": oid})
     return User(doc) if doc else None
 
-# -------- App constants/helpers --------
+# -------- Helpers --------
 CATEGORIES = ["All", "Children", "Teens", "Adult"]
 
 def first_last(paras):
     parts = [p.strip() for p in paras if p and p.strip()]
-    if not parts:
-        return ""
+    if not parts: return ""
     return parts[0] if len(parts) == 1 else f"{parts[0]}\n\n{parts[-1]}"
 
 def to_oid(id_str):
@@ -136,6 +124,10 @@ def to_oid(id_str):
         return ObjectId(id_str)
     except Exception:
         return None
+
+def clamp_to_today(dt: datetime) -> datetime:
+    now = datetime.now()
+    return dt if dt <= now else now
 
 # -------- Routes --------
 @app.route("/")
@@ -199,15 +191,15 @@ def titles_page():
 @app.route("/book/<id>")
 def book_details(id):
     oid = to_oid(id)
-    if not oid:
-        abort(404)
+    if not oid: abort(404)
     d = books_coll.find_one({"_id": oid})
-    if not d:
-        abort(404)
+    if not d: abort(404)
     d["_id"] = str(d["_id"])
     return render_template("book_details.html", book=d)
 
 # -------- Loans --------
+RENEW_DAYS = 14
+
 @app.route("/loans/make/<id>", methods=["POST", "GET"])
 @login_required
 def make_loan(id):
@@ -216,7 +208,7 @@ def make_loan(id):
         flash("Invalid book id.", "error")
         return redirect(url_for("titles_page"))
 
-    book = books_coll.find_one({"_id": book_oid}, {"title": 1, "available": 1, "copies": 1})
+    book = books_coll.find_one({"_id": book_oid}, {"title": 1, "available": 1})
     if not book:
         flash("Book not found.", "error")
         return redirect(url_for("titles_page"))
@@ -230,6 +222,7 @@ def make_loan(id):
         flash("You already have this title on loan. Please return it before borrowing again.", "warning")
         return redirect(url_for("book_details", id=id))
 
+    # Decrement availability atomically
     updated = books_coll.find_one_and_update(
         {"_id": book_oid, "available": {"$gt": 0}},
         {"$inc": {"available": -1}},
@@ -239,92 +232,181 @@ def make_loan(id):
         flash("No copies available to loan.", "error")
         return redirect(url_for("book_details", id=id))
 
-    # Create the loan with random borrow_date 
-    days_ago = random.randint(10, 20)
-    borrow_date = datetime.now() - timedelta(days=days_ago)
-
+    now = datetime.now()
     loans_coll.insert_one({
         "user_id": ObjectId(current_user.id),
         "book_id": book_oid,
         "title": book.get("title", ""),
-        "borrow_date": borrow_date,
-        "returned": False,
-        "return_date": None
+        "borrow_date": now,
+        "due_date": now + timedelta(days=RENEW_DAYS),  
+        "return_date": None,
+        "renew_count": 0,
+        "returned": False
     })
 
     flash("Loan created successfully. Enjoy your book!", "success")
-    return redirect(url_for("book_details", id=id))
-
-@app.route("/loans/return/<id>", methods=["POST", "GET"])
-@login_required
-def return_loan(id):
-    """Mark one active loan for this user & book as returned, increment available."""
-    book_oid = to_oid(id)
-    if not book_oid:
-        flash("Invalid book id.", "error")
-        return redirect(url_for("titles_page"))
-
-    loan = loans_coll.find_one_and_update(
-        {
-            "user_id": ObjectId(current_user.id),
-            "book_id": book_oid,
-            "returned": False
-        },
-        {
-            "$set": {"returned": True, "return_date": datetime.now()}
-        },
-        return_document=ReturnDocument.BEFORE
-    )
-    if not loan:
-        flash("No active loan to return for this title.", "warning")
-        return redirect(url_for("book_details", id=id))
-
-    books_coll.update_one({"_id": book_oid}, {"$inc": {"available": 1}})
-    flash("Book returned. Thank you!", "success")
-    return redirect(url_for("book_details", id=id))
+    return redirect(url_for("my_loans"))
 
 @app.route("/loans")
 @login_required
 def my_loans():
-    pipeline = [
-        {"$match": {"user_id": ObjectId(current_user.id)}},
-        {"$sort": {"borrow_date": -1}},
-        {
-            "$lookup": {
-                "from": "books",
-                "localField": "book_id",
-                "foreignField": "_id",
-                "as": "book"
-            }
-        },
-        {"$unwind": {"path": "$book", "preserveNullAndEmptyArrays": True}},
-        {
-            "$project": {
-                "title": 1,
-                "borrow_date": 1,
-                "returned": 1,
-                "return_date": 1,
-                "book_id": 1,
-                "book_cover": {"$ifNull": ["$book.url", ""]},
-            }
-        }
-    ]
-    rows = list(loans_coll.aggregate(pipeline))
-    items = [{
-        "_id": str(r.get("_id")) if r.get("_id") else "", 
-        "title": r.get("title", ""),
-        "borrow_date": r.get("borrow_date"),
-        "returned": bool(r.get("returned", False)),
-        "return_date": r.get("return_date"),
-        "book_id": str(r.get("book_id")) if r.get("book_id") else "",
-        "cover": r.get("book_cover", "")
-    } for r in rows]
+    rows = loans_coll.find({"user_id": ObjectId(current_user.id)}).sort([
+        ("borrow_date", -1), ("borrowDate", -1)
+    ])
+
+    items = []
+    today = datetime.now().date()
+
+    for r in rows:
+        borrow_dt = r.get("borrow_date") or r.get("borrowDate")
+        due_dt    = r.get("due_date")
+        return_dt = r.get("return_date") or r.get("returnDate")
+        renew_cnt = int(r.get("renew_count", r.get("renewCount", 0)) or 0)
+        returned  = bool(r.get("returned", False))
+
+        if not due_dt and borrow_dt:
+            due_dt = borrow_dt + timedelta(days=RENEW_DAYS)
+            if not returned and due_dt < datetime.now():
+                due_dt = datetime.now() + timedelta(days=RENEW_DAYS)
+            loans_coll.update_one({"_id": r["_id"]}, {"$set": {"due_date": due_dt}})
+
+        overdue = (not returned) and bool(due_dt) and (today > due_dt.date())
+
+        book_doc = books_coll.find_one({"_id": r.get("book_id")}, {"authors": 1, "url": 1}) if r.get("book_id") else None
+        authors  = ", ".join((book_doc or {}).get("authors", []))
+        thumb    = (book_doc or {}).get("url", "")
+
+        items.append({
+            "_id": str(r["_id"]),
+            "book_id": str(r.get("book_id")) if r.get("book_id") else "",
+            "title": r.get("title", ""),
+            "authors": authors,
+            "thumb": thumb,
+            "borrow_date": borrow_dt,
+            "due_date": due_dt.date() if due_dt else None,
+            "return_date": return_dt.date() if return_dt else None,
+            "renew_count": renew_cnt,
+            "returned": returned,
+            "overdue": bool(overdue),
+        })
+
     return render_template("loans.html", loans=items)
+
+
+@app.route("/loans/return/<id>", methods=["POST", "GET"])
+@login_required
+def return_loan(id):
+    oid = to_oid(id)
+    if not oid:
+        flash("Invalid id.", "error")
+        return redirect(url_for("my_loans"))
+
+    loan = loans_coll.find_one({
+        "$or": [{"_id": oid}, {"book_id": oid}],
+        "user_id": ObjectId(current_user.id),
+        "returned": False
+    })
+    if not loan:
+        flash("No active loan to return.", "warning")
+        return redirect(url_for("my_loans"))
+
+    now = datetime.now()
+
+    borrow_dt = loan.get("borrow_date") or loan.get("borrowDate") or now
+
+    due_dt = loan.get("due_date")
+    if isinstance(due_dt, str):
+        try:
+            due_dt = datetime.fromisoformat(due_dt)
+        except Exception:
+            due_dt = None
+
+    cap_latest = min(now, due_dt) if due_dt else now
+    if cap_latest < borrow_dt:
+        cap_latest = borrow_dt
+
+    if cap_latest > borrow_dt:
+        frac = random.random()
+        ret_dt = borrow_dt + (cap_latest - borrow_dt) * frac
+    else:
+        ret_dt = cap_latest  
+
+    loans_coll.update_one(
+        {"_id": loan["_id"]},
+        {"$set": {"returned": True, "return_date": ret_dt, "returnDate": ret_dt}}
+    )
+
+    # Increment book availability
+    if loan.get("book_id"):
+        books_coll.update_one({"_id": loan["book_id"]}, {"$inc": {"available": 1}})
+
+    flash(f"Book returned. Return date: {ret_dt.strftime('%d %b %Y %H:%M')}", "success")
+    return redirect(url_for("my_loans"))
+
+
+RENEW_DAYS_MIN = 10
+RENEW_DAYS_MAX = 20
+
+@app.route("/loans/<loan_id>/renew", methods=["GET", "POST"])
+@login_required
+def renew_loan(loan_id):
+    loan = loans_coll.find_one({
+        "_id": ObjectId(loan_id),
+        "user_id": ObjectId(current_user.id)  
+    })
+    if not loan:
+        flash("Loan not found.", "error")
+        return redirect(url_for("my_loans"))
+
+    if loan.get("returned"):
+        flash("This loan was already returned.", "error")
+        return redirect(url_for("my_loans"))
+
+    renew_count = int(loan.get("renew_count", 0))
+    if renew_count >= 2:
+        flash("You have reached the maximum of 2 renewals.", "error")
+        return redirect(url_for("my_loans"))
+
+    now = datetime.now()
+
+    due = loan.get("due_date")
+    if not isinstance(due, datetime):
+        if isinstance(due, str):
+            try:
+                due = datetime.fromisoformat(due)
+            except Exception:
+                due = None
+        if due is None:
+            borrow = loan.get("borrow_date") or now
+            fallback_days = random.randint(RENEW_DAYS_MIN, RENEW_DAYS_MAX)
+            due = borrow + timedelta(days=fallback_days)
+
+    base = due if due > now else now
+
+    extra_days = random.randint(RENEW_DAYS_MIN, RENEW_DAYS_MAX)
+    new_due = base + timedelta(days=extra_days)
+
+    result = loans_coll.update_one(
+        {"_id": loan["_id"]},
+        {
+            "$set": {"due_date": new_due, "updated_at": now},
+            "$inc": {"renew_count": 1}
+        }
+    )
+
+    if result.modified_count == 1:
+        flash(f"Renewed. New due date: {new_due.strftime('%d %b %Y')} (+{extra_days} days)", "success")
+    else:
+        flash("Renew failed. Please try again.", "error")
+
+    return redirect(url_for("my_loans"))
+
 
 
 @app.route("/loans/delete/<loan_id>", methods=["POST", "GET"])
 @login_required
 def delete_loan(loan_id):
+    """Delete only returned loans (user keeps history until manually removed)."""
     try:
         oid = ObjectId(loan_id)
     except Exception:
@@ -344,13 +426,11 @@ def delete_loan(loan_id):
     flash("Loan deleted.", "info")
     return redirect(url_for("my_loans"))
 
-
 # -------- Auth pages --------
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("titles_page"))
-
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "").strip()
@@ -372,14 +452,12 @@ def register():
         })
         flash("Registered successfully. Please log in.", "success")
         return redirect(url_for("login"))
-
     return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("titles_page"))
-
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "").strip()
@@ -391,7 +469,6 @@ def login():
             nxt = request.args.get("next")
             return redirect(nxt or url_for("titles_page"))
         flash("Invalid email or password.", "error")
-
     return render_template("login.html")
 
 @app.route("/logout")

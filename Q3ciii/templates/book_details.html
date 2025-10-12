@@ -47,7 +47,7 @@
         {% endif %}
 
         {% if copies > 0 and avail < copies and current_user.is_authenticated %}
-          <a class="btn btn-return" href="{{ url_for('return_loan', id=book._id) }}">Return One</a>
+        <a class="btn btn-primary" href="{{ url_for('return_loan', id=L._id) }}">Return</a>
         {% endif %}
       </div>
     </div>

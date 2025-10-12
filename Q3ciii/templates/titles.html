@@ -18,7 +18,7 @@
         {% endfor %}
       </select>
 
-      <input type="search" name="q" value="{{ q }}" placeholder="Search books..." />
+      <input type="search" name="q" value="{{ q or '' }}" placeholder="Search books..." />
       <button class="btn btn-search" type="submit">Search</button>
     </form>
   </section>
@@ -45,14 +45,10 @@
             </a>
 
             {% if c.available > 0 %}
-              <!-- if not logged in, redirects to login -->
+              <!-- if not logged in, route can redirect to login -->
               <a class="btn btn-loan" href="{{ url_for('make_loan', id=c._id) }}">Make a Loan</a>
             {% else %}
               <span class="btn btn-na" role="button" aria-disabled="true" tabindex="-1">Not Available</span>
-            {% endif %}
-
-            {% if c.copies and c.available < c.copies and current_user.is_authenticated %}
-              <a class="btn btn-return" href="{{ url_for('return_loan', id=c._id) }}">Return One</a>
             {% endif %}
           </div>
         </div>
